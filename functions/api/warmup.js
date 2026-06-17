@@ -29,7 +29,7 @@ export async function onRequestPost(context) {
 
   const model = env.PIP_WARMUP_MODEL || "claude-haiku-4-5-20251001";
   const isTest = mode === "test";
-  const n = Math.max(3, Math.min(Number(count) || 5, 8));
+  const n = Math.max(3, Math.min(Number(count) || 5, 12));
 
   try {
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
@@ -41,7 +41,7 @@ export async function onRequestPost(context) {
       },
       body: JSON.stringify({
         model,
-        max_tokens: 1100,
+        max_tokens: 1600,
         system: isTest
           ? "You write a short, friendly end-of-unit maths check for a 9-year-old (Grade 3). Fair and grade-appropriate — not tricky or mean. You output ONLY valid JSON — no prose, no code fences."
           : "You write warm-up maths questions for a 9-year-old (Grade 3). Easy, friendly, confidence-building. You output ONLY valid JSON — no prose, no code fences.",

@@ -1,66 +1,100 @@
 import React, { useState, useRef, useEffect } from "react";
 
-// ── Pip · a maths buddy (standalone build) ────────────────────────────
-// Talks to your own /api/chat endpoint (a Cloudflare Pages Function),
-// which holds the Anthropic key. The key is NEVER in this file.
+// ── Maths Quest — a booklet game for a 9-year-old ─────────────────────
+// Screen-only, tappable. Journey map → 10-question booklets → treasure
+// chest prizes, coins, stars and levels. Powered by Claude via /api.
 
 const C = {
-  cream: "#FDF6EC",
-  cream2: "#FFEAD0",
-  ink: "#2D3047",
-  inkSoft: "#6B6A86",
-  amber: "#FFB454",
-  amberDeep: "#F59222",
-  purple: "#6C5CE7",
-  purpleSoft: "#EFECFE",
-  green: "#0FB58A",
-  coral: "#FF7B7B",
+  ink: "#2B2350",
+  inkSoft: "#6E6790",
+  cream: "#FFF8EE",
   white: "#FFFFFF",
+  purple: "#7C5CFC",
+  purpleSoft: "#EEE9FF",
+  pink: "#FF6FB5",
+  amber: "#FFB23E",
+  amberDeep: "#F59222",
+  green: "#22C58B",
+  blue: "#3EC5FF",
+  coral: "#FF6B6B",
 };
 
-// safe localStorage (won't crash if blocked)
 const store = {
   get(k) { try { return window.localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { window.localStorage.setItem(k, v); } catch {} },
   del(k) { try { window.localStorage.removeItem(k); } catch {} },
 };
 
-const TOPICS = [
-  { key: "diagnostic", label: "Find my starting point", emoji: "✨",
-    brief: "doing a gentle, game-like check-up to find out what she already knows. Start very easy (counting, simple adding) and slowly try slightly harder ideas across place value and times tables, watching for where she hesitates. Never call it a test." },
-  { key: "place", label: "Tens & hundreds", emoji: "🔢",
-    brief: "place value — what the digits in numbers like 247 really mean (hundreds, tens, ones)." },
-  { key: "addsub", label: "Adding & taking away", emoji: "➕",
-    brief: "addition and subtraction, including carrying and borrowing with 2 and 3 digit numbers." },
-  { key: "times", label: "Times tables", emoji: "✖️",
-    brief: "times tables up to 12, using groups and skip-counting so she understands what multiplying means." },
-  { key: "division", label: "Sharing & dividing", emoji: "🍪",
-    brief: "division, shown as sharing things equally into groups." },
-  { key: "fractions", label: "Fractions", emoji: "🍕",
-    brief: "simple fractions — halves, quarters and thirds — using pizza, chocolate bars and shapes." },
-  { key: "money", label: "Money", emoji: "💰",
-    brief: "money — adding up coins, making amounts and working out change." },
-  { key: "time", label: "Telling time", emoji: "🕒",
-    brief: "telling the time on a clock, and o'clock / half past / quarter past." },
-  { key: "word", label: "Word problems", emoji: "🧩",
-    brief: "word problems — turning a little story into a maths sum, step by step." },
-  { key: "shapes", label: "Shapes", emoji: "🔺",
-    brief: "2D and 3D shapes and their sides, corners and faces." },
+// ── the journey: 10 themed booklets, in order, getting harder ──────────
+const BOOKLETS = [
+  { key: "b_place", emoji: "🔢", title: "Number Town", topic: "Place Value", color: C.purple,
+    brief: "place value to 1000 — reading, writing, comparing and ordering numbers; hundreds, tens and ones." },
+  { key: "b_addsub", emoji: "➕", title: "Plus & Minus Park", topic: "Add & Subtract", color: C.green,
+    brief: "addition and subtraction within 1000, including regrouping (carrying and borrowing) and mental strategies." },
+  { key: "b_times", emoji: "✖️", title: "Times-Table Towers", topic: "Multiplication", color: C.pink,
+    brief: "multiplication as equal groups and arrays; the 2, 3, 4, 5, 6 and 10 times tables; skip-counting." },
+  { key: "b_division", emoji: "➗", title: "Sharing Shores", topic: "Division", color: C.blue,
+    brief: "division as equal sharing and grouping, and relating division to multiplication." },
+  { key: "b_fractions", emoji: "🍕", title: "Fraction Forest", topic: "Fractions", color: C.amber,
+    brief: "halves, thirds, quarters and other unit fractions of shapes and groups; comparing simple fractions." },
+  { key: "b_measure", emoji: "📏", title: "Measure Mountain", topic: "Measurement", color: C.coral,
+    brief: "measuring and comparing length (cm, m), mass (g, kg) and volume (ml, l); reading simple scales." },
+  { key: "b_money", emoji: "💰", title: "Money Market", topic: "Money", color: C.green,
+    brief: "recognising coins and notes, making and adding amounts, and giving change." },
+  { key: "b_time", emoji: "🕒", title: "Clock Castle", topic: "Telling Time", color: C.purple,
+    brief: "reading clocks to the hour, half past, quarter past/to and five minutes; am/pm; simple durations." },
+  { key: "b_shapes", emoji: "🔺", title: "Shape Space", topic: "Shapes", color: C.blue,
+    brief: "naming 2D and 3D shapes and their properties (sides, corners, faces, edges); right angles; symmetry." },
+  { key: "b_word", emoji: "🧩", title: "Puzzle Peak", topic: "Word Problems", color: C.pink,
+    brief: "one- and two-step word problems using everything learned; choosing the right operation." },
 ];
 
-// ── gamification: levels + badges ─────────────────────────────────────
-const DEFAULT_GAME = { totalSparks: 0, sessions: 0, topics: [], badges: [], usedStuck: false, streak: 0, lastDate: "", mastered: [], unitScores: {} };
+const QS_PER_BOOKLET = 10;
+const COINS_PER_CORRECT = 5;
 
-// local-date helpers for the daily streak
+function computeLevel(total) {
+  let level = 1, need = 8, acc = 0;
+  while (total >= acc + need) { acc += need; level += 1; need += 3; }
+  return { level, into: total - acc, need, pct: Math.round(((total - acc) / need) * 100) };
+}
+
+const DEFAULT_GAME = { totalSparks: 0, coins: 0, sessions: 0, stars: {}, mastered: [], badges: [], streak: 0, lastDate: "" };
+
+const BADGES = [
+  { id: "first_book", emoji: "🎒", label: "First Booklet", desc: "Finished your first booklet", test: (s) => s.sessions >= 1 },
+  { id: "perfect", emoji: "💯", label: "Perfect!", desc: "Got 3 stars on a booklet", test: (s) => s.hasPerfect },
+  { id: "stars10", emoji: "⭐", label: "Star Catcher", desc: "Collected 10 stars", test: (s) => s.totalStars >= 10 },
+  { id: "coins100", emoji: "🪙", label: "Coin Collector", desc: "Earned 100 coins", test: (s) => s.coins >= 100 },
+  { id: "streak3", emoji: "🔥", label: "On a Roll", desc: "Played 3 days in a row", test: (s) => (s.streak || 0) >= 3 },
+  { id: "streak7", emoji: "⚡", label: "Super Streak", desc: "Played 7 days in a row", test: (s) => (s.streak || 0) >= 7 },
+  { id: "half", emoji: "🥈", label: "Halfway Hero", desc: "Cleared 5 booklets", test: (s) => (s.mastered || []).length >= 5 },
+  { id: "champion", emoji: "👑", label: "Maths Champion", desc: "Cleared every booklet", test: (s) => (s.mastered || []).length >= BOOKLETS.length },
+];
+
+function statsFrom(g) {
+  const starVals = Object.values(g.stars || {});
+  return {
+    sessions: g.sessions || 0,
+    coins: g.coins || 0,
+    totalStars: starVals.reduce((a, b) => a + (b || 0), 0),
+    hasPerfect: starVals.some((v) => v >= 3),
+    mastered: g.mastered || [],
+    streak: g.streak || 0,
+    totalSparks: g.totalSparks || 0,
+  };
+}
+function earnedBadges(g) {
+  const s = statsFrom(g);
+  return BADGES.filter((b) => b.test(s)).map((b) => b.id);
+}
+
 function localDate(d = new Date()) {
   const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
   return z.toISOString().slice(0, 10);
 }
 function isYesterday(prev, today) {
   if (!prev) return false;
-  const p = new Date(prev + "T00:00:00");
-  const t = new Date(today + "T00:00:00");
-  return t - p === 86400000;
+  return new Date(today + "T00:00:00") - new Date(prev + "T00:00:00") === 86400000;
 }
 function computeDailyUpdate(g) {
   const today = localDate();
@@ -68,1355 +102,611 @@ function computeDailyUpdate(g) {
   if (g.lastDate === today) streak = g.streak || 1;
   else if (isYesterday(g.lastDate, today)) streak = (g.streak || 0) + 1;
   else streak = 1;
-  const returning = (g.streak || 0) > 1 && streak === 1 && g.lastDate !== today;
-  return { today, streak, returning };
+  return { today, streak };
 }
 
-// gentle escalating thresholds so early levels come quickly
-function computeLevel(total) {
-  let level = 1, need = 6, acc = 0;
-  while (total >= acc + need) { acc += need; level += 1; need += 2; }
-  return { level, into: total - acc, need, pct: Math.round(((total - acc) / need) * 100) };
-}
-
-const BADGES = [
-  { id: "first_session", emoji: "👣", label: "First Steps", desc: "Finished your very first session", test: (s) => s.sessions >= 1 },
-  { id: "brave_tryer", emoji: "🦁", label: "Brave Tryer", desc: "Asked for a hint when stuck — that's brave!", test: (s) => s.usedStuck },
-  { id: "spark25", emoji: "✨", label: "Spark Collector", desc: "Earned 25 effort sparks", test: (s) => s.totalSparks >= 25 },
-  { id: "explorer", emoji: "🧭", label: "Explorer", desc: "Tried 3 different topics", test: (s) => s.topics.length >= 3 },
-  { id: "spark100", emoji: "🌟", label: "Bright Spark", desc: "Earned 100 effort sparks", test: (s) => s.totalSparks >= 100 },
-  { id: "stickwithit", emoji: "🍯", label: "Stick With It", desc: "Finished 5 sessions", test: (s) => s.sessions >= 5 },
-  { id: "level5", emoji: "✋", label: "High Five", desc: "Reached level 5", test: (s) => computeLevel(s.totalSparks).level >= 5 },
-  { id: "allrounder", emoji: "🌈", label: "All-Rounder", desc: "Tried 6 different topics", test: (s) => s.topics.length >= 6 },
-  { id: "spark250", emoji: "🏆", label: "Maths Superstar", desc: "Earned 250 effort sparks", test: (s) => s.totalSparks >= 250 },
-  { id: "streak3", emoji: "🔥", label: "On a Roll", desc: "Practised 3 days in a row", test: (s) => (s.streak || 0) >= 3 },
-  { id: "streak7", emoji: "⚡", label: "Super Streak", desc: "Practised 7 days in a row", test: (s) => (s.streak || 0) >= 7 },
-  { id: "half", emoji: "🥈", label: "Halfway Hero", desc: "Mastered 5 units", test: (s) => (s.mastered || []).length >= 5 },
-  { id: "champion", emoji: "👑", label: "Maths Champion", desc: "Mastered every unit", test: (s) => (s.mastered || []).length >= UNITS.length },
-];
-
-function earnedBadges(stats) {
-  return BADGES.filter((b) => b.test(stats)).map((b) => b.id);
-}
-
-// ── the guided Grade 3 learning path (units in order) ─────────────────
-const UNITS = [
-  { key: "u_place", emoji: "🔢", title: "Place Value to 1000",
-    brief: "place value to 1000 — reading, writing, comparing and ordering numbers; hundreds, tens and ones; expanded form. Build it concrete→pictorial→abstract with base-ten blocks and pictures." },
-  { key: "u_addsub", emoji: "➕", title: "Adding & Subtracting",
-    brief: "addition and subtraction within 1000, including regrouping (carrying and borrowing), mental strategies like making tens, and checking answers." },
-  { key: "u_times", emoji: "✖️", title: "Times Tables",
-    brief: "multiplication as equal groups and arrays; the 2, 3, 4, 5, 6 and 10 times tables; skip-counting; understanding what multiplying means." },
-  { key: "u_division", emoji: "➗", title: "Division",
-    brief: "division as equal sharing and grouping, relating division to multiplication, and simple division facts." },
-  { key: "u_fractions", emoji: "🍕", title: "Fractions",
-    brief: "halves, thirds, quarters and other unit fractions of shapes and groups; comparing simple fractions; simple equivalent fractions using pictures." },
-  { key: "u_measure", emoji: "📏", title: "Measurement",
-    brief: "measuring and comparing length (cm, m), mass (g, kg) and volume (ml, l); reading simple scales." },
-  { key: "u_money", emoji: "💰", title: "Money",
-    brief: "recognising coins and notes, making and adding amounts, and giving change." },
-  { key: "u_time", emoji: "🕒", title: "Telling Time",
-    brief: "reading clocks to the hour, half past, quarter past/to and five minutes; am/pm; simple durations." },
-  { key: "u_shapes", emoji: "🔺", title: "Shapes & Geometry",
-    brief: "naming 2D and 3D shapes and their properties (sides, corners, faces, edges); right angles; simple symmetry." },
-  { key: "u_word", emoji: "🧩", title: "Word Problems",
-    brief: "solving one- and two-step word problems using everything learned; choosing the right operation; drawing simple bar models." },
-];
-
-// strip emoji & spell out maths symbols so the voice reads naturally
 function stripForSpeech(text) {
   if (!text) return "";
   return String(text)
     .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}\u{2705}\u{2B50}]/gu, "")
     .replace(/×/g, " times ").replace(/÷/g, " divided by ")
     .replace(/=/g, " equals ").replace(/\+/g, " plus ")
-    .replace(/\s+/g, " ")
-    .trim();
+    .replace(/\s+/g, " ").trim();
 }
 
-function systemPrompt(buddy, name, topicBrief) {
-  return `You are ${buddy}, a warm and patient maths buddy for ${name}, who is 9 years old and in Grade 3 at an international school. ${name} sometimes finds maths hard, so your MOST important job is to make her feel safe, clever and never silly for getting something wrong.
+const starsFromPct = (pct) => (pct >= 90 ? 3 : pct >= 70 ? 2 : pct >= 40 ? 1 : 0);
 
-HOW YOU TEACH:
-- Be Socratic: guide ${name} to work things out herself with small questions and hints. Do NOT just hand over the answer.
-- But never leave her feeling stuck or defeated. After she has tried and you've given about two hints, warmly walk through it together step by step so she always ends on a small win.
-- One tiny step at a time. Ask only ONE question per message.
-- Keep every message very short: 1 to 3 short sentences, simple words a 9-year-old reads easily.
-- Make maths concrete and real: cookies, stickers, coins, building blocks, pizza slices, her own fingers. Turn numbers into pictures she can imagine.
-- Celebrate EFFORT and good thinking, not just right answers. "I love how you tried that" matters more than "correct".
-- Mistakes are normal and useful. When she's wrong, stay cheerful: "Ooh, so close! Let's peek at it together." Never tell her she is bad at maths.
-- A little warmth and the odd emoji is lovely (😊 ⭐ 🍪) but don't overdo it.
-
-READING HER SIGNALS:
-- If she says she's stuck or "I don't know": make the step smaller, give a gentle hint, or offer an easier version.
-- If she seems frustrated or sad: pause the maths, say something kind, and give her an easy question she can win to rebuild confidence.
-- If she says it's too easy: give a slightly trickier question on the same idea.
-
-KEEP IT GRADE 3: numbers up to about 1000, times tables to 12, simple fractions (halves, quarters, thirds), money, time, measuring, shapes and word problems. If she wanders off topic, gently bring her back. If she ever seems upset about something that is not maths, kindly suggest she talk to a grown-up she trusts.
-
-Right now you are helping her with: ${topicBrief}
-
-Use her name sometimes. Begin warmly with a friendly hello and one easy first question.`;
-}
-
-// Friendly illustrated teacher "Pip". Not a real person. Moods: idle | thinking | talking.
-// Colours are easy to change — see SKIN / HAIR / SHIRT below.
-const SKIN = "#E8B48F", SKIN_SH = "#D89E76", HAIR = "#46342A", SHIRT = "#6C5CE7";
+// ── friendly female teacher mascot ────────────────────────────────────
+const SKIN = "#E8B48F", HAIR = "#46342A";
 function Pip({ mood = "idle", size = 64 }) {
-  const thinking = mood === "thinking";
-  const talking = mood === "talking";
+  const thinking = mood === "thinking", talking = mood === "talking";
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} style={{ display: "block" }}>
-      {/* soft avatar disc + active-speaker glow */}
       <circle cx="50" cy="50" r="48" fill="#FFF3E0" />
-      <circle cx="50" cy="50" r="47" fill="none" stroke={talking ? "#FFCD79" : "#F4E6CC"} strokeWidth="2"
-        className={talking ? "pip-ring" : ""} />
-      <clipPath id="pipClip"><circle cx="50" cy="50" r="46" /></clipPath>
-      <g clipPath="url(#pipClip)">
-        {/* shoulders / shirt */}
-        <path d="M18 100 C20 78 34 70 50 70 C66 70 80 78 82 100 Z" fill={SHIRT} />
+      <circle cx="50" cy="50" r="47" fill="none" stroke={talking ? "#FFCD79" : "#F4E6CC"} strokeWidth="2" className={talking ? "g-ring" : ""} />
+      <clipPath id="pc"><circle cx="50" cy="50" r="46" /></clipPath>
+      <g clipPath="url(#pc)">
+        <path d="M18 100 C20 78 34 70 50 70 C66 70 80 78 82 100 Z" fill={C.purple} />
         <path d="M50 70 L44 84 L50 92 L56 84 Z" fill="#fff" opacity="0.95" />
-        {/* neck */}
-        <rect x="44" y="60" width="12" height="14" rx="5" fill={SKIN_SH} />
-        {/* long hair (behind head) */}
+        <rect x="44" y="60" width="12" height="14" rx="5" fill="#D89E76" />
         <path d="M24 44 C20 60 22 78 26 92 L34 92 C30 78 30 60 32 50 C30 47 28 46 26 46 Z" fill={HAIR} />
         <path d="M76 44 C80 60 78 78 74 92 L66 92 C70 78 70 60 68 50 C70 47 72 46 74 46 Z" fill={HAIR} />
-        {/* head */}
         <ellipse cx="50" cy="45" rx="20" ry="22" fill={SKIN} />
-        {/* ears */}
-        <circle cx="30" cy="46" r="4" fill={SKIN} />
-        <circle cx="70" cy="46" r="4" fill={SKIN} />
-        {/* hair top + fringe */}
+        <circle cx="30" cy="46" r="4" fill={SKIN} /><circle cx="70" cy="46" r="4" fill={SKIN} />
         <path d="M27 46 C24 22 44 16 50 16 C56 16 76 22 73 46 C73 35 64 29 50 29 C36 29 27 35 27 46 Z" fill={HAIR} />
         <path d="M27 47 C26 38 30 31 35 28 C31 34 32 41 32 47 Z" fill={HAIR} />
         <path d="M73 47 C74 38 70 31 65 28 C69 34 68 41 68 47 Z" fill={HAIR} />
-        {/* little hair clip */}
-        <circle cx="64" cy="30" r="2.4" fill="#FF7B7B" />
-        {/* cheeks */}
-        <circle cx="37" cy="50" r="4" fill="#FF9F6E" opacity="0.4" />
-        <circle cx="63" cy="50" r="4" fill="#FF9F6E" opacity="0.4" />
-        {/* eyebrows */}
+        <circle cx="64" cy="30" r="2.4" fill={C.pink} />
+        <circle cx="37" cy="50" r="4" fill="#FF9F6E" opacity="0.4" /><circle cx="63" cy="50" r="4" fill="#FF9F6E" opacity="0.4" />
         <path d={thinking ? "M37 35 q5 -3 9 -1" : "M37 36 q5 -2 9 0"} stroke={HAIR} strokeWidth="2" fill="none" strokeLinecap="round" />
         <path d={thinking ? "M54 34 q5 -2 9 1" : "M54 36 q5 -2 9 0"} stroke={HAIR} strokeWidth="2" fill="none" strokeLinecap="round" />
-        {/* glasses (teacherly) */}
         <g stroke={C.ink} strokeWidth="1.6" fill="none" opacity="0.85">
-          <rect x="34" y="40" width="13" height="10" rx="5" />
-          <rect x="53" y="40" width="13" height="10" rx="5" />
-          <line x1="47" y1="44" x2="53" y2="44" />
+          <rect x="34" y="40" width="13" height="10" rx="5" /><rect x="53" y="40" width="13" height="10" rx="5" /><line x1="47" y1="44" x2="53" y2="44" />
         </g>
-        {/* eyes */}
         {thinking ? (
-          <>
-            <path d="M38 44 q3 -3 6 0" stroke={C.ink} strokeWidth="2.2" fill="none" strokeLinecap="round" />
-            <path d="M56 44 q3 -3 6 0" stroke={C.ink} strokeWidth="2.2" fill="none" strokeLinecap="round" />
-          </>
+          <><path d="M38 44 q3 -3 6 0" stroke={C.ink} strokeWidth="2.2" fill="none" strokeLinecap="round" /><path d="M56 44 q3 -3 6 0" stroke={C.ink} strokeWidth="2.2" fill="none" strokeLinecap="round" /></>
         ) : (
-          <>
-            <circle cx="41" cy="45" r="2.4" fill={C.ink} />
-            <circle cx="59" cy="45" r="2.4" fill={C.ink} />
-          </>
+          <><circle cx="41" cy="45" r="2.4" fill={C.ink} /><circle cx="59" cy="45" r="2.4" fill={C.ink} /></>
         )}
-        {/* mouth */}
-        {talking ? (
-          <ellipse cx="50" cy="57" rx="5" ry="3.6" fill="#7A3B3B" className="pip-mouth" style={{ transformOrigin: "50px 57px" }} />
-        ) : thinking ? (
-          <circle cx="50" cy="57" r="2.4" fill="#7A3B3B" />
-        ) : (
-          <path d="M43 56 q7 7 14 0" stroke="#7A3B3B" strokeWidth="2.6" fill="none" strokeLinecap="round" />
-        )}
+        {talking ? <ellipse cx="50" cy="57" rx="5" ry="3.6" fill="#7A3B3B" className="g-mouth" style={{ transformOrigin: "50px 57px" }} />
+          : thinking ? <circle cx="50" cy="57" r="2.4" fill="#7A3B3B" />
+            : <path d="M43 56 q7 7 14 0" stroke="#7A3B3B" strokeWidth="2.6" fill="none" strokeLinecap="round" />}
       </g>
     </svg>
   );
 }
 
-// Teacher Pip surrounded by little star friends — more as she levels up
-function PipScene({ level = 1, size = 96 }) {
-  const friends = Math.min(Math.max(level - 1, 0), 6);
-  const r = size * 0.62;
+function Chest({ open }) {
   return (
-    <div style={{ position: "relative", width: size * 2.0, height: size * 1.5, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      {Array.from({ length: friends }).map((_, i) => {
-        const ang = (-150 + (i * 300) / Math.max(friends - 1, 1)) * (Math.PI / 180);
-        return (
-          <div key={i} className="pip-float" style={{ position: "absolute", left: `calc(50% + ${Math.cos(ang) * r}px)`, top: `calc(50% + ${Math.sin(ang) * r * 0.7}px)`, transform: "translate(-50%,-50%)", fontSize: size * 0.22 }}>
-            ⭐
-          </div>
-        );
-      })}
-      <div className="pip-float"><Pip size={size} /></div>
+    <svg viewBox="0 0 120 110" width="170" height="156" style={{ display: "block", margin: "0 auto" }}>
+      {open && [...Array(7)].map((_, i) => (
+        <text key={i} x={20 + i * 13} y={20 + (i % 3) * 8} fontSize="13" className="g-spark" style={{ animationDelay: `${i * 0.08}s` }}>✨</text>
+      ))}
+      {/* base */}
+      <rect x="20" y="55" width="80" height="45" rx="8" fill="#9B5A2B" />
+      <rect x="20" y="55" width="80" height="45" rx="8" fill="none" stroke="#7A431D" strokeWidth="3" />
+      <rect x="52" y="68" width="16" height="20" rx="3" fill="#FFD66B" />
+      <circle cx="60" cy="74" r="3" fill="#7A431D" />
+      {/* glow when open */}
+      {open && <ellipse cx="60" cy="56" rx="42" ry="14" fill="#FFE08A" opacity="0.7" className="g-glow" />}
+      {/* lid */}
+      <g style={{ transformOrigin: "60px 55px", transform: open ? "rotate(-22deg) translateY(-4px)" : "none", transition: "transform .5s cubic-bezier(.2,1.4,.4,1)" }}>
+        <path d="M20 55 Q20 32 60 32 Q100 32 100 55 Z" fill="#A9612F" />
+        <path d="M20 55 Q20 32 60 32 Q100 32 100 55 Z" fill="none" stroke="#7A431D" strokeWidth="3" />
+        <rect x="18" y="50" width="84" height="9" rx="4" fill="#FFD66B" />
+      </g>
+    </svg>
+  );
+}
+
+function Confetti() {
+  const cols = [C.purple, C.pink, C.amber, C.green, C.blue, C.coral];
+  return (
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
+      {[...Array(16)].map((_, i) => (
+        <div key={i} className="g-confetti" style={{
+          left: `${(i * 6.3) % 100}%`, background: cols[i % cols.length],
+          animationDelay: `${(i % 8) * 0.12}s`, transform: `rotate(${i * 33}deg)`,
+        }} />
+      ))}
     </div>
   );
 }
 
-function LevelBar({ total }) {
-  const { level, into, need, pct } = computeLevel(total);
+function Stars({ n, size = 26, animate }) {
   return (
-    <div style={{ width: "100%" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
-        <span style={{ fontFamily: "'Baloo 2', sans-serif", fontWeight: 700, color: C.ink, fontSize: 15 }}>Level {level}</span>
-        <span style={{ fontSize: 12, color: C.inkSoft, fontWeight: 700 }}>{need - into} ✨ to next</span>
-      </div>
-      <div style={{ height: 14, borderRadius: 999, background: "#F1E6D2", overflow: "hidden" }}>
-        <div style={{ width: `${pct}%`, height: "100%", borderRadius: 999, background: `linear-gradient(90deg, ${C.amber}, ${C.amberDeep})`, transition: "width .5s ease" }} />
-      </div>
+    <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+      {[1, 2, 3].map((i) => (
+        <span key={i} className={animate && i <= n ? "g-pop" : ""} style={{ fontSize: size, filter: i <= n ? "none" : "grayscale(1)", opacity: i <= n ? 1 : 0.35, animationDelay: `${i * 0.15}s` }}>⭐</span>
+      ))}
     </div>
   );
 }
 
-export default function MathsBuddy() {
-  const [stage, setStage] = useState("gate"); // gate | setup | chat
+export default function MathsGame() {
+  const [stage, setStage] = useState("gate"); // gate | welcome | home | play | reward
   const [passcode, setPasscode] = useState("");
   const [pcInput, setPcInput] = useState("");
   const [gateError, setGateError] = useState("");
   const [name, setName] = useState("");
   const [buddyName, setBuddyName] = useState("Pip");
-  const [topic, setTopic] = useState(TOPICS[0]);
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [sparks, setSparks] = useState(0);
-  const [showGrownups, setShowGrownups] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [parentNote, setParentNote] = useState("");
-  const [progress, setProgress] = useState(null); // null = not loaded
-  const [progressLoading, setProgressLoading] = useState(false);
-  // gamification
   const [game, setGame] = useState(DEFAULT_GAME);
-  const [showStickers, setShowStickers] = useState(false);
-  const [usedStuckSession, setUsedStuckSession] = useState(false);
-  const [topicsSession, setTopicsSession] = useState([]);
-  const [levelUp, setLevelUp] = useState(null); // {from, to} or null
-  const [newBadges, setNewBadges] = useState([]);
-  const [streakInfo, setStreakInfo] = useState(null); // {streak, returning}
-  // warm-up
-  const [warmupQs, setWarmupQs] = useState([]);
-  const [wIdx, setWIdx] = useState(0);
-  const [wPick, setWPick] = useState(null); // index tapped, or null
-  const [wCorrect, setWCorrect] = useState(0);
-  const [warmupLoading, setWarmupLoading] = useState(false);
-  const [quizMode, setQuizMode] = useState("warmup"); // "warmup" | "unittest"
-  const [selectedUnit, setSelectedUnit] = useState(null);
-  const [unitResult, setUnitResult] = useState(null);
-  // voice
+
   const [muted, setMuted] = useState(false);
   const [speaking, setSpeaking] = useState(false);
-  const lastSpokenRef = useRef(-1);
-  const [listening, setListening] = useState(false);
-  const recogRef = useRef(null);
-  const speechSupported = typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-  const scrollRef = useRef(null);
 
+  const [booklet, setBooklet] = useState(null);
+  const [qs, setQs] = useState([]);
+  const [qLoading, setQLoading] = useState(false);
+  const [idx, setIdx] = useState(0);
+  const [pick, setPick] = useState(null);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [coinsEarned, setCoinsEarned] = useState(0);
+  const [showHint, setShowHint] = useState(false);
+  const [reward, setReward] = useState(null); // {stars, pct, passed, coins, newlyMastered, newBadges, levelUp, streak}
+  const [chestOpen, setChestOpen] = useState(false);
+  const [showBook, setShowBook] = useState(false);
+
+  // ── voice ──
   useEffect(() => {
-    const id = "pip-fonts";
+    const id = "g-fonts";
     if (!document.getElementById(id)) {
       const l = document.createElement("link");
       l.id = id; l.rel = "stylesheet";
-      l.href = "https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap";
+      l.href = "https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap";
       document.head.appendChild(l);
     }
-    // remember passcode + name on this device so she doesn't re-type each time
-    const savedPc = store.get("pip_pc");
-    const savedName = store.get("pip_name");
-    if (savedName) setName(savedName);
-    const savedBuddy = store.get("pip_buddy");
-    if (savedBuddy) setBuddyName(savedBuddy);
-    if (savedPc) { setPasscode(savedPc); setStage("setup"); }
+    const pc = store.get("pip_pc"), nm = store.get("pip_name"), bd = store.get("pip_buddy");
+    if (nm) setName(nm);
+    if (bd) setBuddyName(bd);
     if (store.get("pip_muted") === "1") setMuted(true);
-    // warm up the voice list (some browsers load voices async)
+    if (pc) { setPasscode(pc); setStage(nm ? "home" : "welcome"); if (nm) loadGame(nm, pc); }
     try { window.speechSynthesis && window.speechSynthesis.getVoices(); } catch {}
+    // eslint-disable-next-line
   }, []);
 
   function pickVoice() {
     try {
       const vs = window.speechSynthesis.getVoices() || [];
       const en = vs.filter((v) => /^en/i.test(v.lang));
-      // best natural female voices across iOS / macOS / Windows / Chrome, in order
-      const preferred = [
-        /Google UK English Female/i,
-        /Microsoft (Aria|Jenny|Sonia|Libby|Michelle)[^]*Natural/i,
-        /Microsoft (Aria|Jenny|Sonia|Libby|Michelle)/i,
-        /Samantha/i, /Serena/i, /Karen/i, /Moira/i, /Tessa/i, /Fiona/i, /Catherine/i,
-        /Google US English/i,
-        /female/i,
-      ];
-      for (const re of preferred) {
-        const m = en.find((v) => re.test(v.name));
-        if (m) return m;
-      }
-      // avoid obviously male-named voices if we can
-      const notMale = en.find((v) => !/(male|daniel|fred|alex|arthur|oliver|george|james|guy|david)/i.test(v.name));
-      return notMale || en[0] || vs[0] || null;
+      const pref = [/Google UK English Female/i, /Microsoft (Aria|Jenny|Sonia|Libby)[^]*Natural/i, /Samantha/i, /Serena/i, /Karen/i, /Moira/i, /Tessa/i, /Google US English/i, /female/i];
+      for (const re of pref) { const m = en.find((v) => re.test(v.name)); if (m) return m; }
+      return en.find((v) => !/(male|daniel|fred|alex|arthur|oliver|george|guy|david)/i.test(v.name)) || en[0] || vs[0] || null;
     } catch { return null; }
   }
-
   function speak(text) {
+    if (muted) return;
     const clean = stripForSpeech(text);
     if (!clean) return;
     try {
-      const synth = window.speechSynthesis;
-      if (!synth) return;
+      const synth = window.speechSynthesis; if (!synth) return;
       synth.cancel();
       const u = new SpeechSynthesisUtterance(clean);
-      const v = pickVoice();
-      if (v) u.voice = v;
+      const v = pickVoice(); if (v) u.voice = v;
       u.rate = 0.94; u.pitch = 1.12;
-      u.onstart = () => setSpeaking(true);
-      u.onend = () => setSpeaking(false);
-      u.onerror = () => setSpeaking(false);
+      u.onstart = () => setSpeaking(true); u.onend = () => setSpeaking(false); u.onerror = () => setSpeaking(false);
       synth.speak(u);
     } catch {}
   }
+  function stopSpeak() { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch {} setSpeaking(false); }
+  function toggleMute() { setMuted((m) => { const n = !m; store.set("pip_muted", n ? "1" : "0"); if (n) stopSpeak(); return n; }); }
 
-  function stopSpeak() {
-    try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch {}
-    setSpeaking(false);
-  }
-
-  function startListening() {
-    if (listening) { try { recogRef.current && recogRef.current.stop(); } catch {} return; }
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
-    stopSpeak(); // don't record Pip's own voice
-    let rec = recogRef.current;
-    if (!rec) {
-      rec = new SR();
-      rec.lang = "en-US";
-      rec.interimResults = true;
-      rec.continuous = false;
-      rec.maxAlternatives = 1;
-      recogRef.current = rec;
-    }
-    rec.onresult = (e) => {
-      let txt = "";
-      for (let i = 0; i < e.results.length; i++) txt += e.results[i][0].transcript;
-      setInput(txt);
-      if (e.results[e.results.length - 1].isFinal) {
-        setListening(false);
-        const finalTxt = txt.trim();
-        if (finalTxt) setTimeout(() => send(finalTxt), 150);
-      }
-    };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    try { rec.start(); setListening(true); } catch { setListening(false); }
-  }
-
-  function toggleMute() {
-    setMuted((m) => {
-      const next = !m;
-      store.set("pip_muted", next ? "1" : "0");
-      if (next) stopSpeak();
-      return next;
-    });
-  }
-
-  // speak each new message from Pip (unless muted)
+  // read each question aloud
   useEffect(() => {
-    if (muted) return;
-    const i = messages.length - 1;
-    if (i < 0) return;
-    const m = messages[i];
-    if (m && m.role === "assistant" && i !== lastSpokenRef.current) {
-      lastSpokenRef.current = i;
-      speak(m.content);
-    }
-  }, [messages, muted]);
-
-  // speak the current warm-up question when it appears
-  useEffect(() => {
-    if (stage === "warmup" && !muted && wPick === null && warmupQs[wIdx]) {
-      speak(warmupQs[wIdx].q);
-    }
+    if (stage === "play" && !qLoading && qs[idx] && pick === null) speak(qs[idx].q);
     // eslint-disable-next-line
-  }, [stage, wIdx, warmupQs, muted]);
+  }, [stage, idx, qs, qLoading]);
 
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, loading]);
-
-  async function callPip(history, currentTopic) {
-    setLoading(true);
-    setError(null);
+  // ── game state ──
+  async function loadGame(forName, pc) {
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          passcode,
-          name,
-          system: systemPrompt(buddyName || "Pip", name || "your friend", currentTopic.brief),
-          messages: history.map((m) => ({ role: m.role, content: m.content })),
-        }),
+      const res = await fetch("/api/game", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passcode: pc ?? passcode, name: forName ?? name, action: "load" }),
       });
-      if (res.status === 401) {
-        store.del("pip_pc");
-        setPasscode("");
-        setGateError("That passcode didn't work. Please try again.");
-        setStage("gate");
-        return;
-      }
-      if (!res.ok) throw new Error("net");
-      const data = await res.json();
-      const text = (data.content || [])
-        .filter((b) => b.type === "text")
-        .map((b) => b.text)
-        .join("\n")
-        .trim();
-      setMessages([...history, { role: "assistant", content: text || "Hmm, let me think about that again. Can you say it once more? 😊" }]);
-    } catch (e) {
-      setError(`${buddyName || "Pip"} lost the connection for a moment.`);
-    } finally {
-      setLoading(false);
-    }
+      const data = res.ok ? await res.json() : null;
+      setGame(data && data.state ? { ...DEFAULT_GAME, ...data.state } : DEFAULT_GAME);
+    } catch { setGame(DEFAULT_GAME); }
+  }
+  function saveGame(updated) {
+    fetch("/api/game", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ passcode, name, action: "save", state: updated }),
+    }).catch(() => {});
   }
 
+  // ── navigation / flow ──
   function submitGate() {
-    const v = pcInput.trim();
-    if (!v) return;
-    setPasscode(v);
-    store.set("pip_pc", v);
-    setGateError("");
-    setStage("setup");
+    const v = pcInput.trim(); if (!v) return;
+    setPasscode(v); store.set("pip_pc", v); setGateError("");
+    setStage(name ? "home" : "welcome");
+    if (name) loadGame(name, v);
   }
-
-  function resetForSession(t) {
-    stopSpeak();
-    lastSpokenRef.current = -1;
-    setSparks(0);
-    setUsedStuckSession(false);
-    setTopicsSession([t.key]);
-    setLevelUp(null);
-    setNewBadges([]);
-    loadGame(name);
-  }
-
-  function begin(selected) {
-    const t = selected || topic;
-    setTopic(t);
-    if (name.trim()) store.set("pip_name", name.trim());
-    store.set("pip_buddy", (buddyName || "Pip").trim());
-    resetForSession(t);
-    setStage("chat");
-    const trigger = {
-      role: "user", hidden: true,
-      content: `[${name || "The student"} just chose to work on: ${t.label}. Greet her warmly by name and start with one easy, friendly first question.]`,
-    };
-    const next = [trigger];
-    setMessages(next);
-    callPip(next, t);
-  }
-
-  async function startWarmup(selected) {
-    const t = selected || topic;
-    setTopic(t);
-    if (name.trim()) store.set("pip_name", name.trim());
-    store.set("pip_buddy", (buddyName || "Pip").trim());
-    resetForSession(t);
-    setQuizMode("warmup");
-    await runQuiz({ label: t.label, brief: t.brief, mode: "warmup", onEmpty: () => begin(t) });
-  }
-
-  async function runQuiz({ label, brief, mode, onEmpty }) {
-    setWarmupQs([]);
-    setWIdx(0);
-    setWPick(null);
-    setWCorrect(0);
-    setWarmupLoading(true);
-    setStage("warmup");
-    try {
-      const res = await fetch("/api/warmup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passcode, name, topicLabel: label, topicBrief: brief, mode, count: 5 }),
-      });
-      const data = res.ok ? await res.json() : { questions: [] };
-      if (!data.questions || data.questions.length === 0) { onEmpty && onEmpty(); return; }
-      setWarmupQs(data.questions);
-    } catch {
-      onEmpty && onEmpty();
-    } finally {
-      setWarmupLoading(false);
-    }
-  }
-
-  // ── learning path ──
-  function goToPath() {
-    stopSpeak();
-    setSparks(0);
-    setLevelUp(null);
-    setNewBadges([]);
-    setStreakInfo(null);
-    setUnitResult(null);
-    setStage("path");
-  }
-  function openPath() {
+  function finishWelcome() {
     if (!name.trim()) return;
     store.set("pip_name", name.trim());
     store.set("pip_buddy", (buddyName || "Pip").trim());
     loadGame(name);
-    goToPath();
+    setStage("home");
   }
-  function openUnit(unit) {
-    setSelectedUnit(unit);
-    setStage("unit");
+
+  const masteredSet = new Set(game.mastered || []);
+  const currentIdx = BOOKLETS.findIndex((b) => !masteredSet.has(b.key));
+
+  async function playBooklet(b) {
+    setBooklet(b);
+    setQs([]); setIdx(0); setPick(null); setCorrectCount(0); setCoinsEarned(0); setShowHint(false);
+    setQLoading(true); setStage("play");
+    try {
+      const res = await fetch("/api/warmup", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passcode, name, topicLabel: b.topic, topicBrief: b.brief, mode: "test", count: QS_PER_BOOKLET }),
+      });
+      const data = res.ok ? await res.json() : { questions: [] };
+      if (!data.questions || !data.questions.length) { setStage("home"); return; }
+      setQs(data.questions);
+    } catch { setStage("home"); } finally { setQLoading(false); }
   }
-  function learnUnit(unit) {
-    begin({ key: unit.key, label: unit.title, emoji: unit.emoji, brief: unit.brief });
+
+  function answer(i) {
+    if (pick !== null) return;
+    const q = qs[idx];
+    const right = i === q.answer;
+    setPick(i);
+    if (right) { setCorrectCount((c) => c + 1); setCoinsEarned((c) => c + COINS_PER_CORRECT); }
+    speak((right ? "Yes! " : "Good try. ") + (q.why || ""));
   }
-  function startUnitTest(unit) {
-    setSelectedUnit(unit);
-    setQuizMode("unittest");
+  function next() {
+    if (idx + 1 < qs.length) { setIdx((i) => i + 1); setPick(null); setShowHint(false); }
+    else finishBooklet();
+  }
+
+  function finishBooklet() {
     stopSpeak();
-    setSparks(0);
-    setUsedStuckSession(false);
-    setLevelUp(null);
-    setNewBadges([]);
-    runQuiz({ label: unit.title, brief: unit.brief, mode: "test", onEmpty: () => setStage("unit") });
-  }
-
-  function finishUnitTest() {
-    const total = warmupQs.length;
-    const correct = wCorrect;
-    const pct = total ? Math.round((correct / total) * 100) : 0;
-    const passed = total > 0 && correct / total >= 0.8;
-    const { today, streak, returning } = computeDailyUpdate(game);
-    const masteredSet = new Set(game.mastered || []);
-    const newlyMastered = passed && !masteredSet.has(selectedUnit.key);
-    if (passed) masteredSet.add(selectedUnit.key);
-    const unitScores = { ...(game.unitScores || {}) };
-    unitScores[selectedUnit.key] = Math.max(unitScores[selectedUnit.key] || 0, pct);
-
+    const total = qs.length;
+    const pct = total ? Math.round((correctCount / total) * 100) : 0;
+    const stars = starsFromPct(pct);
+    const passed = stars >= 2;
+    const sparks = total + correctCount; // try + correct
+    const { today, streak } = computeDailyUpdate(game);
+    const prevStars = (game.stars || {})[booklet.key] || 0;
+    const newStars = { ...(game.stars || {}), [booklet.key]: Math.max(prevStars, stars) };
+    const mastered = new Set(game.mastered || []);
+    const newlyMastered = passed && !mastered.has(booklet.key);
+    if (passed) mastered.add(booklet.key);
     const updated = {
-      totalSparks: game.totalSparks + sparks,
-      sessions: game.sessions + 1,
-      topics: Array.from(new Set([...(game.topics || []), selectedUnit.key])),
-      usedStuck: game.usedStuck,
-      streak,
-      lastDate: today,
-      mastered: Array.from(masteredSet),
-      unitScores,
+      ...game,
+      totalSparks: (game.totalSparks || 0) + sparks,
+      coins: (game.coins || 0) + coinsEarned,
+      sessions: (game.sessions || 0) + 1,
+      stars: newStars,
+      mastered: Array.from(mastered),
+      streak, lastDate: today,
     };
-    const before = computeLevel(game.totalSparks).level;
+    const before = computeLevel(game.totalSparks || 0).level;
     const after = computeLevel(updated.totalSparks).level;
     const prevBadges = game.badges || [];
     const now = earnedBadges(updated);
     updated.badges = now;
 
-    setLevelUp(after > before ? { from: before, to: after } : null);
-    setNewBadges(now.filter((id) => !prevBadges.includes(id)));
-    setStreakInfo({ streak, returning });
-    setUnitResult({ correct, total, pct, passed, newlyMastered });
     setGame(updated);
-    saveGameState(updated);
-    setStage("unitresult");
+    saveGame(updated);
+    setReward({
+      stars, pct, passed, coins: coinsEarned, newlyMastered,
+      newBadges: BADGES.filter((b) => now.includes(b.id) && !prevBadges.includes(b.id)),
+      levelUp: after > before ? after : null, streak,
+    });
+    setChestOpen(false);
+    setStage("reward");
   }
 
-  function answerWarmup(choiceIdx) {
-    if (wPick !== null) return; // already answered this one
-    const q = warmupQs[wIdx];
-    const correct = choiceIdx === q.answer;
-    setWPick(choiceIdx);
-    setSparks((s) => s + 1 + (correct ? 1 : 0)); // a spark for trying, bonus for correct
-    if (correct) setWCorrect((c) => c + 1);
-    if (!muted) speak((correct ? "Yes! Nice one. " : "Good try. ") + (q.why || ""));
-  }
-
-  function nextWarmup() {
-    if (wIdx + 1 < warmupQs.length) {
-      setWIdx((i) => i + 1);
-      setWPick(null);
-    } else if (quizMode === "unittest") {
-      finishUnitTest();
-    } else {
-      flowIntoChat();
-    }
-  }
-
-  function flowIntoChat() {
-    const t = topic;
-    const score = `${wCorrect} out of ${warmupQs.length}`;
+  function backToMap() {
     stopSpeak();
-    lastSpokenRef.current = -1;
-    setStage("chat");
-    const trigger = {
-      role: "user", hidden: true,
-      content: `[${name || "The student"} just finished a quick warm-up on ${t.label} and got ${score} right. Greet her warmly by name, say something encouraging about the warm-up, then start the lesson with one friendly question — go a little gentler if she found the warm-up tricky.]`,
-    };
-    const next = [trigger];
-    setMessages(next);
-    callPip(next, t);
+    setReward(null); setChestOpen(false); setBooklet(null);
+    setStage("home");
   }
 
-  function switchTopic(t) {
-    if (t.key === topic.key || loading) return;
-    setTopic(t);
-    setTopicsSession((prev) => Array.from(new Set([...prev, t.key])));
-    const trigger = {
-      role: "user", hidden: true,
-      content: `[${name || "The student"} now wants to switch to: ${t.label}. Say something cheerful about the new topic and start with one easy question.]`,
-    };
-    const next = [...messages, trigger];
-    setMessages(next);
-    callPip(next, t);
-  }
+  // ════════════════════════ SCREENS ════════════════════════
 
-  function send(text) {
-    const value = (text ?? input).trim();
-    if (!value || loading) return;
-    const next = [...messages, { role: "user", content: value }];
-    setMessages(next);
-    setInput("");
-    setSparks((s) => s + 1);
-    callPip(next, topic);
-  }
-
-  function retry() { setError(null); callPip(messages, topic); }
-
-  async function loadGame(forName) {
-    try {
-      const res = await fetch("/api/game", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passcode, name: forName ?? name, action: "load" }),
-      });
-      const data = res.ok ? await res.json() : null;
-      setGame(data && data.state ? { ...DEFAULT_GAME, ...data.state } : DEFAULT_GAME);
-    } catch {
-      setGame(DEFAULT_GAME);
-    }
-  }
-
-  function saveGameState(updated) {
-    fetch("/api/game", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ passcode, name, action: "save", state: updated }),
-    }).catch(() => {});
-  }
-
-  async function finishSession() {
-    if (saving) return;
-    stopSpeak();
-    setSaving(true);
-
-    // ── update the game from this session ──
-    const { today, streak, returning } = computeDailyUpdate(game);
-    setStreakInfo({ streak, returning });
-
-    const updated = {
-      totalSparks: game.totalSparks + sparks,
-      sessions: game.sessions + 1,
-      topics: Array.from(new Set([...(game.topics || []), ...topicsSession])),
-      usedStuck: game.usedStuck || usedStuckSession,
-      streak,
-      lastDate: today,
-      mastered: game.mastered || [],
-      unitScores: game.unitScores || {},
-    };
-    const before = computeLevel(game.totalSparks).level;
-    const after = computeLevel(updated.totalSparks).level;
-    const prev = game.badges || [];
-    const now = earnedBadges(updated);
-    updated.badges = now;
-    setLevelUp(after > before ? { from: before, to: after } : null);
-    setNewBadges(now.filter((id) => !prev.includes(id)));
-    setGame(updated);
-    saveGameState(updated);
-
-    setStage("wrapup");
-    setParentNote("");
-    try {
-      const res = await fetch("/api/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passcode, name, messages }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setParentNote(data.parentNote || "");
-      }
-    } catch {
-      // memory save is best-effort; the wrap-up still shows
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function newSession() {
-    stopSpeak();
-    lastSpokenRef.current = -1;
-    setMessages([]);
-    setSparks(0);
-    setParentNote("");
-    setProgress(null);
-    setLevelUp(null);
-    setNewBadges([]);
-    setStreakInfo(null);
-    setUsedStuckSession(false);
-    setTopicsSession([]);
-    setStage("setup");
-  }
-
-  async function loadProgress() {
-    setProgressLoading(true);
-    try {
-      const res = await fetch("/api/log", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passcode, name }),
-      });
-      const data = res.ok ? await res.json() : { notes: [] };
-      setProgress(data.notes || []);
-    } catch {
-      setProgress([]);
-    } finally {
-      setProgressLoading(false);
-    }
-  }
-
-  const visible = messages.filter((m) => !m.hidden);
-
-  // ── Passcode gate ──────────────────────────────────────────────────
   if (stage === "gate") {
     return (
-      <div style={wrap}>
-        <Style />
-        <div style={{ ...card, maxWidth: 420 }}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 6 }}>
-            <div className="pip-float"><Pip size={84} /></div>
-          </div>
-          <h1 style={h1}>Welcome back!</h1>
-          <p style={{ ...sub, marginTop: 2 }}>Pop in the secret word to start.</p>
-          <input
-            value={pcInput}
-            onChange={(e) => setPcInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submitGate()}
-            placeholder="Secret word…"
-            type="password"
-            style={{ ...textInput, marginTop: 18 }}
-          />
-          {gateError && <p style={{ color: C.coral, fontSize: 13.5, margin: "10px 2px 0", fontWeight: 700 }}>{gateError}</p>}
-          <button onClick={submitGate} disabled={!pcInput.trim()} className="pip-cta"
-            style={{ ...cta, opacity: pcInput.trim() ? 1 : 0.5, cursor: pcInput.trim() ? "pointer" : "not-allowed" }}>
-            Let me in →
-          </button>
+      <Shell>
+        <div style={{ ...card, maxWidth: 400, textAlign: "center" }}>
+          <div className="g-float" style={{ marginBottom: 4 }}><Pip size={88} /></div>
+          <h1 style={h1}>Maths Quest</h1>
+          <p style={sub}>Pop in the secret word to play! 🔑</p>
+          <input value={pcInput} onChange={(e) => setPcInput(e.target.value)} type="password"
+            onKeyDown={(e) => e.key === "Enter" && submitGate()} placeholder="Secret word…" style={input} />
+          {gateError && <p style={{ color: C.coral, fontWeight: 700, fontSize: 13.5, marginTop: 10 }}>{gateError}</p>}
+          <button onClick={submitGate} disabled={!pcInput.trim()} className="g-btn" style={{ ...cta, opacity: pcInput.trim() ? 1 : 0.5 }}>Let me in →</button>
         </div>
-      </div>
+      </Shell>
     );
   }
 
-  // ── Setup ──────────────────────────────────────────────────────────
-  if (stage === "setup") {
+  if (stage === "welcome") {
     return (
-      <div style={wrap}>
-        <Style />
-        <div style={card}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 6 }}>
-            <div className="pip-float"><Pip size={92} /></div>
-          </div>
-          <h1 style={h1}>Hi, I'm {buddyName || "Pip"}!</h1>
-          <p style={{ ...sub, marginTop: 2 }}>
-            Your friendly maths buddy. We'll figure things out together, one little
-            step at a time — and mistakes are totally allowed. 🌟
-          </p>
-
-          <label style={fieldLabel}>What's your name?</label>
-          <input value={name} onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && name.trim() && begin()}
-            placeholder="Type your name…" style={textInput} maxLength={20} />
-
-          <label style={{ ...fieldLabel, marginTop: 18 }}>What should you call your teacher?</label>
-          <input value={buddyName} onChange={(e) => setBuddyName(e.target.value)}
-            placeholder="e.g. Pip, Maya, Mr Bright…" style={textInput} maxLength={16} />
-          <p style={{ fontSize: 12, color: C.inkSoft, margin: "6px 2px 0" }}>You can pick any name you like! ✨</p>
-
-          <button onClick={openPath} disabled={!name.trim()} className="pip-cta"
-            style={{ ...cta, marginTop: 20, opacity: name.trim() ? 1 : 0.5, cursor: name.trim() ? "pointer" : "not-allowed" }}>
-            📚 Open Learning Path →
-          </button>
-          <p style={{ fontSize: 12.5, color: C.inkSoft, textAlign: "center", margin: "12px 0 4px" }}>— or just explore a topic —</p>
-
-          <p style={{ ...fieldLabel, marginTop: 18 }}>What shall we start with?</p>
-          <div style={chipWrap}>
-            {TOPICS.map((t) => {
-              const active = t.key === topic.key;
-              return (
-                <button key={t.key} onClick={() => setTopic(t)} className="pip-chip"
-                  style={{ ...chip, background: active ? C.purple : C.white, color: active ? C.white : C.ink, borderColor: active ? C.purple : "#EADFCB" }}>
-                  <span style={{ marginRight: 6 }}>{t.emoji}</span>{t.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <button onClick={() => name.trim() && begin()} disabled={!name.trim()} className="pip-cta"
-            style={{ ...cta, opacity: name.trim() ? 1 : 0.5, cursor: name.trim() ? "pointer" : "not-allowed" }}>
-            Let's go! →
-          </button>
-
-          <button onClick={() => name.trim() && startWarmup()} disabled={!name.trim()} className="pip-cta"
-            style={{ ...ctaAlt, opacity: name.trim() ? 1 : 0.5, cursor: name.trim() ? "pointer" : "not-allowed" }}>
-            🔥 Quick warm-up first
-          </button>
-
-          <button
-            onClick={() => { const next = !showStickers; setShowStickers(next); if (next && name.trim()) loadGame(name); }}
-            disabled={!name.trim()}
-            style={{ ...grownToggle, color: C.purple, opacity: name.trim() ? 1 : 0.5 }}>
-            ⭐ My sticker book
-          </button>
-          {showStickers && name.trim() && <StickerBook game={game} />}
-
-          <button onClick={() => setShowGrownups((s) => !s)} style={grownToggle}>👀 For grown-ups</button>
-          {showGrownups && (
-            <GrownupsNote
-              buddyName={buddyName || "Pip"}
-              progress={progress}
-              progressLoading={progressLoading}
-              onLoadProgress={loadProgress}
-            />
-          )}
+      <Shell>
+        <div style={{ ...card, maxWidth: 420, textAlign: "center" }}>
+          <div className="g-float"><Pip size={92} /></div>
+          <h1 style={h1}>Welcome to Maths Quest!</h1>
+          <p style={sub}>Answer booklets, win treasure, and level up. 🏆</p>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name…" maxLength={20}
+            onKeyDown={(e) => e.key === "Enter" && name.trim() && finishWelcome()} style={{ ...input, marginTop: 16 }} />
+          <input value={buddyName} onChange={(e) => setBuddyName(e.target.value)} placeholder="Name your helper (e.g. Pip)" maxLength={16} style={{ ...input, marginTop: 10 }} />
+          <button onClick={finishWelcome} disabled={!name.trim()} className="g-btn" style={{ ...cta, opacity: name.trim() ? 1 : 0.5 }}>Start the quest! →</button>
         </div>
-      </div>
+      </Shell>
     );
   }
 
-  // ── Learning Path map ──────────────────────────────────────────────
-  if (stage === "path") {
-    const masteredSet = new Set(game.mastered || []);
-    const currentIdx = UNITS.findIndex((u) => !masteredSet.has(u.key));
-    const doneCount = masteredSet.size;
+  // ── HOME / journey map ──
+  if (stage === "home") {
+    const lv = computeLevel(game.totalSparks || 0);
     return (
-      <div style={wrap}>
-        <Style />
-        <div style={card}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-            <button onClick={() => setStage("setup")} className="pip-help" style={doneBtn}>← Back</button>
-            <div style={{ flex: 1, textAlign: "center", fontFamily: "'Baloo 2', sans-serif", fontWeight: 700, fontSize: 20, color: C.ink }}>📚 Learning Path</div>
-            <div style={{ width: 56 }} />
-          </div>
-          <p style={{ ...sub, marginTop: 0, marginBottom: 12 }}>{doneCount} of {UNITS.length} units mastered 🏅</p>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-            {UNITS.map((u, i) => {
-              const mastered = masteredSet.has(u.key);
-              const current = !mastered && (currentIdx === i);
-              const locked = !mastered && !current;
-              const best = (game.unitScores || {})[u.key];
-              return (
-                <button key={u.key} disabled={locked} onClick={() => !locked && openUnit(u)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 12, textAlign: "left", width: "100%",
-                    padding: "13px 14px", borderRadius: 16, cursor: locked ? "default" : "pointer",
-                    border: current ? `2px solid ${C.purple}` : "1.5px solid #EADFCB",
-                    background: locked ? "#F4EEE3" : current ? C.purpleSoft : C.white,
-                    opacity: locked ? 0.6 : 1,
-                  }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 999, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: mastered ? "#FFF1D6" : current ? C.purple : "#ECE3D3", color: "#fff" }}>
-                    {mastered ? "🏅" : locked ? "🔒" : <span style={{ fontFamily: "'Baloo 2', sans-serif", fontWeight: 700 }}>{i + 1}</span>}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "'Baloo 2', sans-serif", fontWeight: 700, color: C.ink, fontSize: 15 }}>{u.emoji} {u.title}</div>
-                    <div style={{ fontSize: 12, color: C.inkSoft }}>
-                      {mastered ? `Mastered${best ? ` · best ${best}%` : ""} — tap to revisit` : current ? "Start here →" : "Locked"}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {doneCount === UNITS.length && (
-            <div className="pip-pop" style={{ ...levelUpCard, textAlign: "center", marginTop: 14 }}>
-              👑 You mastered every unit — you're a Maths Champion!
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // ── Unit detail ────────────────────────────────────────────────────
-  if (stage === "unit" && selectedUnit) {
-    const mastered = (game.mastered || []).includes(selectedUnit.key);
-    const best = (game.unitScores || {})[selectedUnit.key];
-    return (
-      <div style={wrap}>
-        <Style />
-        <div style={{ ...card, textAlign: "center" }}>
-          <button onClick={() => setStage("path")} className="pip-help" style={{ ...doneBtn, float: "left" }}>← Path</button>
-          <div style={{ fontSize: 46, marginTop: 8 }}>{selectedUnit.emoji}</div>
-          <h1 style={{ ...h1, fontSize: 25 }}>{selectedUnit.title}</h1>
-          {mastered && <p style={{ color: C.green, fontWeight: 700, fontSize: 14, margin: "2px 0 0" }}>🏅 Mastered{best ? ` · best ${best}%` : ""}</p>}
-
-          <div style={{ ...grownBox, textAlign: "left", marginTop: 14 }}>
-            <p style={{ ...grownP, marginBottom: 4 }}>What you'll learn</p>
-            <p style={{ fontSize: 13.5, color: C.ink, lineHeight: 1.55, margin: 0 }}>{selectedUnit.brief}</p>
-          </div>
-
-          <button onClick={() => learnUnit(selectedUnit)} className="pip-cta" style={cta}>
-            💬 Learn with {buddyName || "Pip"}
-          </button>
-          <button onClick={() => startUnitTest(selectedUnit)} className="pip-cta" style={ctaAlt}>
-            ✅ {mastered ? "Take the check again" : "Unit Check"}
-          </button>
-          <p style={{ fontSize: 12, color: C.inkSoft, marginTop: 10 }}>
-            Get <b>4 out of 5</b> on the Unit Check to master this unit and unlock the next one. You can practise as much as you like first! 🌟
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Unit result ────────────────────────────────────────────────────
-  if (stage === "unitresult" && unitResult && selectedUnit) {
-    const r = unitResult;
-    const masteredSet = new Set(game.mastered || []);
-    const nextUnit = UNITS.find((u) => !masteredSet.has(u.key));
-    const fresh = BADGES.filter((b) => newBadges.includes(b.id));
-    return (
-      <div style={wrap}>
-        <Style />
-        <div style={{ ...card, maxWidth: 460, textAlign: "center" }}>
-          <PipScene level={computeLevel(game.totalSparks).level} size={74} />
-          {r.passed ? (
-            <>
-              <h1 style={h1}>You did it{name ? `, ${name}` : ""}! 🎉</h1>
-              <p style={{ ...sub, marginTop: 4 }}>
-                You scored <b style={{ color: C.green }}>{r.correct}/{r.total}</b> and
-                {r.newlyMastered ? <> mastered <b>{selectedUnit.emoji} {selectedUnit.title}</b>! 🏅</> : <> passed <b>{selectedUnit.title}</b> again! 🏅</>}
-              </p>
-              {r.newlyMastered && nextUnit && (
-                <div className="pip-pop" style={{ ...streakCard, marginTop: 12 }}>
-                  🔓 You've unlocked <b>{nextUnit.emoji} {nextUnit.title}</b>!
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <h1 style={{ ...h1, fontSize: 26 }}>So close! 💛</h1>
-              <p style={{ ...sub, marginTop: 4 }}>
-                You got <b>{r.correct}/{r.total}</b>. A little more practice and you'll have it —
-                everyone needs a few goes. Let's not rush. 🌱
-              </p>
-            </>
-          )}
-
-          {levelUp && <div className="pip-pop" style={levelUpCard}>🎈 Level up! You're now <b>Level {levelUp.to}</b>!</div>}
-          {streakInfo && (
-            <div className="pip-pop" style={streakCard}>
-              {streakInfo.returning ? <>👋 Welcome back! Fresh <b>🔥 {streakInfo.streak}-day streak</b>.</>
-                : streakInfo.streak >= 2 ? <><b>🔥 {streakInfo.streak} days in a row!</b></>
-                : <>🔥 Day one of your streak!</>}
-            </div>
-          )}
-          {fresh.length > 0 && (
-            <div style={{ marginTop: 14, display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-              {fresh.map((b) => (
-                <div key={b.id} className="pip-pop" style={badgeEarned} title={b.desc}>
-                  <div style={{ fontSize: 30 }}>{b.emoji}</div>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink, marginTop: 2 }}>{b.label}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {r.passed ? (
-            <button onClick={goToPath} className="pip-cta" style={cta}>Back to the path →</button>
-          ) : (
-            <>
-              <button onClick={() => learnUnit(selectedUnit)} className="pip-cta" style={cta}>💬 Practise with {buddyName || "Pip"}</button>
-              <button onClick={() => startUnitTest(selectedUnit)} className="pip-cta" style={ctaAlt}>Try the check again</button>
-              <button onClick={goToPath} style={grownToggle}>Back to the path</button>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // ── Warm-up (tappable multiple choice) ─────────────────────────────
-  if (stage === "warmup") {
-    const q = warmupQs[wIdx];
-    const isTest = quizMode === "unittest";
-    const quizEmoji = isTest ? (selectedUnit?.emoji || "✅") : "🔥";
-    const quizName = isTest ? `${selectedUnit?.title || "Unit"} Check` : "Warm-up";
-    return (
-      <div style={wrap}>
-        <Style />
-        <div style={{ ...card, maxWidth: 480 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-            <div className={warmupLoading ? "pip-think" : ""}><Pip size={42} mood={warmupLoading ? "thinking" : speaking ? "talking" : "idle"} /></div>
+      <Shell>
+        <div style={{ ...card, padding: 0, overflow: "hidden" }}>
+          {/* HUD */}
+          <div style={hud}>
+            <div className="g-float2"><Pip size={44} mood={speaking ? "talking" : "idle"} /></div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "'Baloo 2', sans-serif", fontWeight: 700, color: C.ink }}>{quizEmoji} {quizName}</div>
-              <div style={{ fontSize: 12.5, color: C.inkSoft }}>{isTest ? "Show what you've learned!" : `${topic.emoji} ${topic.label}`}</div>
+              <div style={{ fontFamily: F.head, fontWeight: 800, color: C.ink, fontSize: 16 }}>Hi {name}! 👋</div>
+              <div style={{ display: "flex", gap: 8, marginTop: 3 }}>
+                <Pill>🪙 {game.coins || 0}</Pill>
+                <Pill>⭐ Lv {lv.level}</Pill>
+                {(game.streak || 0) > 0 && <Pill>🔥 {game.streak}</Pill>}
+              </div>
             </div>
-            <button onClick={toggleMute} title={muted ? "Turn voice on" : "Turn voice off"} className="pip-help" style={doneBtn}>{muted ? "🔇" : "🔊"}</button>
-            <div style={sparkBox}>
-              <span>⭐</span>
-              <span style={{ fontFamily: "'Baloo 2', sans-serif", fontWeight: 700, color: C.amberDeep }}>{sparks}</span>
-            </div>
+            <button onClick={toggleMute} className="g-btn" style={iconBtn}>{muted ? "🔇" : "🔊"}</button>
+          </div>
+          <div style={{ padding: "6px 16px 0" }}><LevelBar total={game.totalSparks || 0} /></div>
+
+          {/* journey */}
+          <div style={{ position: "relative", padding: "18px 0 8px" }}>
+            <div style={{ position: "absolute", top: 0, bottom: 0, left: "50%", width: 4, marginLeft: -2, background: "repeating-linear-gradient(#E7DEF6 0 10px, transparent 10px 20px)" }} />
+            {BOOKLETS.map((b, i) => {
+              const done = masteredSet.has(b.key);
+              const current = !done && currentIdx === i;
+              const locked = !done && !current;
+              const st = (game.stars || {})[b.key] || 0;
+              const side = i % 2 === 0 ? "flex-start" : "flex-end";
+              return (
+                <div key={b.key} style={{ position: "relative", display: "flex", justifyContent: side, padding: "10px 26px" }}>
+                  <button onClick={() => !locked && playBooklet(b)} disabled={locked} className={current ? "g-pulse g-btn" : "g-btn"}
+                    style={{
+                      width: 150, textAlign: "center", borderRadius: 22, padding: "12px 8px 10px", cursor: locked ? "default" : "pointer",
+                      background: locked ? "#EFEAF7" : "#fff", border: `3px solid ${locked ? "#E0D7F0" : b.color}`,
+                      opacity: locked ? 0.65 : 1, boxShadow: locked ? "none" : `0 8px 0 -2px ${b.color}33`,
+                    }}>
+                    <div style={{ width: 56, height: 56, margin: "0 auto", borderRadius: 999, background: locked ? "#DAD0EC" : b.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, boxShadow: "inset 0 -3px 0 rgba(0,0,0,.12)" }}>
+                      {locked ? "🔒" : b.emoji}
+                    </div>
+                    <div style={{ fontFamily: F.head, fontWeight: 800, color: C.ink, fontSize: 14, marginTop: 6 }}>{b.title}</div>
+                    <div style={{ fontSize: 11, color: C.inkSoft, fontWeight: 700 }}>{b.topic}</div>
+                    {done ? <div style={{ marginTop: 4 }}><Stars n={st} size={15} /></div>
+                      : current ? <div style={{ marginTop: 5, fontSize: 12, fontWeight: 800, color: b.color }}>PLAY ▶</div>
+                        : <div style={{ marginTop: 5, fontSize: 11, color: C.inkSoft, fontWeight: 700 }}>locked</div>}
+                  </button>
+                </div>
+              );
+            })}
           </div>
 
-          {warmupLoading || !q ? (
-            <div style={{ textAlign: "center", padding: "36px 0" }}>
-              <div className="pip-float" style={{ display: "inline-block" }}><Pip size={64} mood="thinking" /></div>
-              <p style={{ ...sub, marginTop: 14 }}>{buddyName || "Pip"} is getting your {isTest ? "questions" : "warm-up"} ready…</p>
+          <div style={{ padding: "4px 16px 16px", display: "flex", gap: 8 }}>
+            <button onClick={() => { loadGame(name); setShowBook(true); }} className="g-btn" style={{ ...softBtn, flex: 1 }}>🏆 My prizes</button>
+          </div>
+          {masteredSet.size === BOOKLETS.length && (
+            <div className="g-pop" style={{ ...banner, margin: "0 16px 16px" }}>👑 You cleared every booklet — Maths Champion!</div>
+          )}
+        </div>
+
+        {showBook && <PrizeBook game={game} onClose={() => setShowBook(false)} />}
+      </Shell>
+    );
+  }
+
+  // ── PLAY ──
+  if (stage === "play") {
+    const q = qs[idx];
+    return (
+      <Shell>
+        <div style={{ ...card, maxWidth: 500 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <button onClick={backToMap} className="g-btn" style={iconBtn}>←</button>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: F.head, fontWeight: 800, color: C.ink, fontSize: 15 }}>{booklet.emoji} {booklet.title}</div>
+            </div>
+            <Pill>🪙 {coinsEarned}</Pill>
+            <button onClick={toggleMute} className="g-btn" style={iconBtn}>{muted ? "🔇" : "🔊"}</button>
+          </div>
+
+          {qLoading || !q ? (
+            <div style={{ textAlign: "center", padding: "44px 0" }}>
+              <div className="g-float" style={{ display: "inline-block" }}><Pip size={70} mood="thinking" /></div>
+              <p style={{ ...sub, marginTop: 14 }}>Opening your booklet… 📖</p>
             </div>
           ) : (
             <>
-              {/* progress dots */}
-              <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 16 }}>
-                {warmupQs.map((_, i) => (
-                  <div key={i} style={{ width: 9, height: 9, borderRadius: 999, background: i < wIdx ? C.green : i === wIdx ? C.amber : "#E7DCC7" }} />
-                ))}
+              {/* progress */}
+              <div style={{ height: 12, borderRadius: 999, background: "#EFEAF7", overflow: "hidden", marginBottom: 4 }}>
+                <div style={{ width: `${(idx / qs.length) * 100}%`, height: "100%", background: `linear-gradient(90deg, ${booklet.color}, ${C.amber})`, borderRadius: 999, transition: "width .3s" }} />
               </div>
+              <p style={{ textAlign: "center", fontSize: 12, fontWeight: 800, color: C.inkSoft, margin: "0 0 14px" }}>Question {idx + 1} of {qs.length}</p>
 
-              <p style={{ fontSize: 12, color: C.inkSoft, fontWeight: 700, textAlign: "center", margin: "0 0 6px" }}>
-                Question {wIdx + 1} of {warmupQs.length}
-              </p>
-              <h2 style={{ fontFamily: "'Baloo 2', sans-serif", fontSize: 22, color: C.ink, textAlign: "center", margin: "0 0 18px", lineHeight: 1.3 }}>
-                {q.q}
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <div style={{ flexShrink: 0 }}><Pip size={40} mood={speaking ? "talking" : "idle"} /></div>
+                <h2 style={{ fontFamily: F.head, fontSize: 21, color: C.ink, margin: 0, lineHeight: 1.3 }}>{q.q}</h2>
+              </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {q.choices.map((c, i) => {
-                  const answered = wPick !== null;
-                  const isAnswer = i === q.answer;
-                  const isPick = i === wPick;
-                  let bg = C.white, bd = "#EADFCB", col = C.ink;
-                  if (answered && isAnswer) { bg = "#E9FBF5"; bd = C.green; col = C.ink; }
-                  else if (answered && isPick && !isAnswer) { bg = "#FFF0F0"; bd = C.coral; col = C.ink; }
+                  const answered = pick !== null, isAns = i === q.answer, isPick = i === pick;
+                  let bg = "#fff", bd = "#E4DAF5", col = C.ink;
+                  if (answered && isAns) { bg = "#E6FAF2"; bd = C.green; }
+                  else if (answered && isPick) { bg = "#FFEFEF"; bd = C.coral; }
                   else if (answered) { col = C.inkSoft; }
                   return (
-                    <button key={i} onClick={() => answerWarmup(i)} disabled={answered} className="pip-chip"
-                      style={{ ...choiceBtn, background: bg, borderColor: bd, color: col }}>
+                    <button key={i} onClick={() => answer(i)} disabled={answered} className="g-btn" style={{ ...choice, background: bg, borderColor: bd, color: col }}>
                       <span>{c}</span>
-                      {answered && isAnswer && <span>✅</span>}
-                      {answered && isPick && !isAnswer && <span>💛</span>}
+                      {answered && isAns && <span>✅</span>}
+                      {answered && isPick && !isAns && <span>💛</span>}
                     </button>
                   );
                 })}
               </div>
 
-              {wPick !== null && (
-                <div className="pip-pop" style={{ ...grownBox, marginTop: 16, textAlign: "left" }}>
-                  <p style={{ margin: 0, fontSize: 14, color: C.ink, fontFamily: "'Nunito', sans-serif", fontWeight: 700 }}>
-                    {wPick === q.answer ? "Yes! Nice one 🌟" : "Good try! 💛"}
-                  </p>
-                  {q.why && <p style={{ margin: "4px 0 0", fontSize: 13.5, color: C.inkSoft, lineHeight: 1.5 }}>{q.why}</p>}
-                </div>
+              {pick === null && q.why && (
+                showHint
+                  ? <div style={{ ...hintBox }}>💡 {q.why}</div>
+                  : <button onClick={() => setShowHint(true)} className="g-btn" style={{ ...softBtn, marginTop: 12 }}>💡 Hint</button>
               )}
 
-              <button onClick={nextWarmup} disabled={wPick === null} className="pip-cta"
-                style={{ ...cta, opacity: wPick === null ? 0.5 : 1, cursor: wPick === null ? "not-allowed" : "pointer" }}>
-                {wIdx + 1 < warmupQs.length ? "Next →" : (quizMode === "unittest" ? "See my result →" : `Start learning with ${buddyName || "Pip"} →`)}
-              </button>
+              {pick !== null && (
+                <>
+                  <div className="g-pop" style={{ ...feedback, borderColor: pick === q.answer ? C.green : C.amber }}>
+                    <b>{pick === q.answer ? "Correct! +5 🪙" : "Good try! 💛"}</b>{q.why ? ` ${q.why}` : ""}
+                  </div>
+                  <button onClick={next} className="g-btn" style={cta}>{idx + 1 < qs.length ? "Next →" : "Open my treasure! 🎁"}</button>
+                </>
+              )}
             </>
           )}
         </div>
-      </div>
+      </Shell>
     );
   }
 
-  // ── Wrap-up (session end) ──────────────────────────────────────────
-  if (stage === "wrapup") {
-    const lvl = computeLevel(game.totalSparks).level;
-    const fresh = BADGES.filter((b) => newBadges.includes(b.id));
+  // ── REWARD / treasure ──
+  if (stage === "reward" && reward) {
     return (
-      <div style={wrap}>
-        <Style />
-        <div style={{ ...card, maxWidth: 460, textAlign: "center" }}>
-          <PipScene level={lvl} size={78} />
-          <h1 style={h1}>Great work today{name ? `, ${name}` : ""}! 🎉</h1>
-          <p style={{ ...sub, marginTop: 4 }}>
-            You earned <b style={{ color: C.amberDeep }}>{sparks} effort spark{sparks === 1 ? "" : "s"}</b> ⭐
-            {" "}— every one is a time you tried!
-          </p>
+      <Shell>
+        <div style={{ ...card, maxWidth: 440, textAlign: "center", position: "relative" }}>
+          {chestOpen && reward.passed && <Confetti />}
+          <h1 style={{ ...h1, fontSize: 26 }}>{booklet.title} {reward.passed ? "cleared!" : "— good try!"}</h1>
+          <p style={{ ...sub, marginTop: 2 }}>You got {reward.pct}% right</p>
 
-          {levelUp && (
-            <div className="pip-pop" style={levelUpCard}>
-              🎈 Level up! You're now <b>Level {levelUp.to}</b> — {buddyName || "Pip"} has a new friend!
-            </div>
-          )}
-
-          {streakInfo && (
-            <div className="pip-pop" style={streakCard}>
-              {streakInfo.returning
-                ? <>👋 Welcome back! You've started a fresh <b>🔥 {streakInfo.streak}-day streak</b>.</>
-                : streakInfo.streak >= 2
-                  ? <><b>🔥 {streakInfo.streak} days in a row!</b> Brilliant turning up.</>
-                  : <>🔥 Day one of your streak — see you again soon!</>}
-            </div>
-          )}
-
-          <div style={{ margin: "16px 0 4px" }}><LevelBar total={game.totalSparks} /></div>
-
-          {fresh.length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <p style={{ ...grownP, marginBottom: 8 }}>New sticker{fresh.length > 1 ? "s" : ""}! 🎁</p>
-              <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-                {fresh.map((b) => (
-                  <div key={b.id} className="pip-pop" style={badgeEarned} title={b.desc}>
-                    <div style={{ fontSize: 30 }}>{b.emoji}</div>
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink, marginTop: 2 }}>{b.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div style={{ ...grownBox, textAlign: "left", marginTop: 18 }}>
-            <p style={{ ...grownP, marginBottom: 6 }}>📋 For grown-ups</p>
-            {saving ? (
-              <p style={{ color: C.inkSoft, fontSize: 13.5, margin: 0 }}>Saving today's progress…</p>
-            ) : parentNote ? (
-              <p style={{ color: C.ink, fontSize: 13.5, lineHeight: 1.55, margin: 0 }}>{parentNote}</p>
-            ) : (
-              <p style={{ color: C.inkSoft, fontSize: 13, margin: 0 }}>
-                Session saved. (Add a KV namespace — see the README — to save memory, progress notes and her sticker book.)
-              </p>
-            )}
+          <div onClick={() => setChestOpen(true)} style={{ cursor: chestOpen ? "default" : "pointer", margin: "6px 0" }} className={chestOpen ? "" : "g-float"}>
+            <Chest open={chestOpen} />
           </div>
 
-          <button onClick={newSession} className="pip-cta" style={cta}>Start a new session →</button>
+          {!chestOpen ? (
+            <button onClick={() => setChestOpen(true)} className="g-btn" style={cta}>Tap to open! 🎁</button>
+          ) : (
+            <div className="g-pop">
+              <Stars n={reward.stars} size={32} animate />
+              <div style={{ display: "flex", justifyContent: "center", gap: 14, margin: "14px 0" }}>
+                <div style={prizePill}>🪙 +{reward.coins}</div>
+                <div style={prizePill}>⭐ +{reward.stars} stars</div>
+              </div>
+
+              {reward.newlyMastered && <div className="g-pop" style={banner}>🏅 New medal — booklet cleared!</div>}
+              {reward.levelUp && <div className="g-pop" style={{ ...banner, background: "#FFF3D9", borderColor: "#FFD98A" }}>🎈 Level up! You're now Level {reward.levelUp}!</div>}
+              {reward.streak >= 2 && <div style={{ ...banner, background: "#FFF1E8", borderColor: "#FFD2B3" }}>🔥 {reward.streak}-day streak!</div>}
+
+              {reward.newBadges.length > 0 && (
+                <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 8 }}>
+                  {reward.newBadges.map((b) => (
+                    <div key={b.id} className="g-pop" style={badgeCard} title={b.desc}>
+                      <div style={{ fontSize: 28 }}>{b.emoji}</div>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: C.ink }}>{b.label}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <button onClick={backToMap} className="g-btn" style={cta}>Back to the map →</button>
+              {!reward.passed && <button onClick={() => playBooklet(booklet)} className="g-btn" style={softBtn}>Try this booklet again</button>}
+            </div>
+          )}
         </div>
-      </div>
+      </Shell>
     );
   }
 
-  // ── Chat ───────────────────────────────────────────────────────────
-  return (
-    <div style={wrap}>
-      <Style />
-      <div style={{ ...card, padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", height: "min(82vh, 760px)" }}>
-        <div style={header}>
-          <div className={loading ? "pip-think" : ""}><Pip size={50} mood={loading ? "thinking" : speaking ? "talking" : "idle"} /></div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: "'Baloo 2', sans-serif", fontWeight: 700, color: C.ink, lineHeight: 1.1 }}>
-              {buddyName || "Pip"}{name ? ` & ${name}` : ""}
-            </div>
-            <div style={{ fontSize: 12.5, color: C.inkSoft }}>{topic.emoji} {topic.label}</div>
-          </div>
-          <div title="Your level" style={{ ...sparkBox, gap: 5 }}>
-            <span style={{ fontSize: 14 }}>🌱</span>
-            <span style={{ fontFamily: "'Baloo 2', sans-serif", fontWeight: 700, color: C.purple, fontSize: 14 }}>Lv {computeLevel(game.totalSparks + sparks).level}</span>
-          </div>
-          <div title="Effort sparks — one for every time you try!" style={sparkBox}>
-            <span style={{ filter: `drop-shadow(0 0 ${Math.min(sparks, 10)}px ${C.amber})` }}>⭐</span>
-            <span style={{ fontFamily: "'Baloo 2', sans-serif", fontWeight: 700, color: C.amberDeep }}>{sparks}</span>
-          </div>
-          <button onClick={toggleMute} title={muted ? "Turn voice on" : "Turn voice off"} className="pip-help" style={doneBtn}>{muted ? "🔇" : "🔊"}</button>
-          <button onClick={finishSession} disabled={loading} className="pip-help" style={doneBtn}>Done 👋</button>
-        </div>
+  return <Shell><div style={card}>Loading…</div></Shell>;
+}
 
-        <div style={topicStrip} className="pip-strip">
-          {TOPICS.map((t) => {
-            const active = t.key === topic.key;
+// ── small components ──
+function Shell({ children }) {
+  return (
+    <div style={shell}><Style />{children}</div>
+  );
+}
+function Pill({ children }) {
+  return <span style={{ background: "#fff", border: "1.5px solid #ECE3FB", borderRadius: 999, padding: "3px 9px", fontSize: 12.5, fontWeight: 800, color: C.ink }}>{children}</span>;
+}
+function LevelBar({ total }) {
+  const { level, need, into } = computeLevel(total);
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 800, color: C.inkSoft, marginBottom: 3 }}>
+        <span>Level {level}</span><span>{need - into} ⭐ to next</span>
+      </div>
+      <div style={{ height: 10, borderRadius: 999, background: "#EFEAF7", overflow: "hidden" }}>
+        <div style={{ width: `${Math.round((into / need) * 100)}%`, height: "100%", background: `linear-gradient(90deg, ${C.amber}, ${C.amberDeep})`, borderRadius: 999, transition: "width .5s" }} />
+      </div>
+    </div>
+  );
+}
+function PrizeBook({ game, onClose }) {
+  const earned = new Set(game.badges || []);
+  const totalStars = Object.values(game.stars || {}).reduce((a, b) => a + (b || 0), 0);
+  return (
+    <div style={modalWrap} onClick={onClose}>
+      <div style={{ ...card, maxWidth: 440, maxHeight: "84vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
+          <h2 style={{ fontFamily: F.head, fontSize: 20, color: C.ink, margin: 0, flex: 1 }}>🏆 My Prizes</h2>
+          <button onClick={onClose} className="g-btn" style={iconBtn}>✕</button>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          <div style={statCard}>🪙<br /><b>{game.coins || 0}</b><br /><span style={statLbl}>coins</span></div>
+          <div style={statCard}>⭐<br /><b>{totalStars}</b><br /><span style={statLbl}>stars</span></div>
+          <div style={statCard}>🏅<br /><b>{(game.mastered || []).length}/{BOOKLETS.length}</b><br /><span style={statLbl}>cleared</span></div>
+        </div>
+        <p style={{ fontFamily: F.head, fontWeight: 800, color: C.ink, margin: "0 0 8px" }}>Stickers ({earned.size}/{BADGES.length})</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
+          {BADGES.map((b) => {
+            const has = earned.has(b.id);
             return (
-              <button key={t.key} onClick={() => switchTopic(t)} className="pip-chip"
-                style={{ ...miniChip, background: active ? C.purple : C.white, color: active ? C.white : C.inkSoft, borderColor: active ? C.purple : "#EADFCB" }}>
-                <span style={{ marginRight: 4 }}>{t.emoji}</span>{t.label}
-              </button>
+              <div key={b.id} title={b.desc} style={{ background: "#fff", border: "1.5px solid #ECE3FB", borderRadius: 14, padding: "10px 6px", textAlign: "center", opacity: has ? 1 : 0.45, filter: has ? "none" : "grayscale(1)" }}>
+                <div style={{ fontSize: 26 }}>{has ? b.emoji : "🔒"}</div>
+                <div style={{ fontSize: 10.5, fontWeight: 800, color: C.ink, marginTop: 2 }}>{b.label}</div>
+              </div>
             );
           })}
         </div>
-
-        <div ref={scrollRef} style={chatArea}>
-          {visible.map((m, i) =>
-            m.role === "assistant" ? (
-              <div key={i} className="pip-msg" style={rowLeft}>
-                <div style={{ flexShrink: 0, marginTop: 2 }}><Pip size={30} /></div>
-                <div style={bubblePip}>{m.content}</div>
-              </div>
-            ) : (
-              <div key={i} className="pip-msg" style={rowRight}>
-                <div style={bubbleKid}>{m.content}</div>
-              </div>
-            )
-          )}
-          {loading && (
-            <div style={rowLeft}>
-              <div style={{ flexShrink: 0, marginTop: 2 }}><Pip size={30} mood="thinking" /></div>
-              <div style={{ ...bubblePip, display: "flex", gap: 5, alignItems: "center" }}>
-                <span className="pip-dot" /><span className="pip-dot" /><span className="pip-dot" />
-              </div>
-            </div>
-          )}
-          {error && (
-            <div style={rowLeft}>
-              <button onClick={retry} style={errBtn}>{error} Tap to try again ↻</button>
-            </div>
-          )}
-        </div>
-
-        <div style={helperRow}>
-          <button onClick={() => { setUsedStuckSession(true); send("I'm a bit stuck. Can you give me a hint?"); }} disabled={loading} className="pip-help" style={{ ...help, color: C.purple, borderColor: C.purpleSoft, background: C.purpleSoft }}>🤔 I'm stuck</button>
-          <button onClick={() => send("Can we try an easier one please?")} disabled={loading} className="pip-help" style={{ ...help, color: C.coral, borderColor: "#FFE3E3", background: "#FFF0F0" }}>😣 Too hard</button>
-          <button onClick={() => send("That was easy! Can I try a harder one?")} disabled={loading} className="pip-help" style={{ ...help, color: C.green, borderColor: "#D6F5EC", background: "#E9FBF5" }}>⭐ Harder!</button>
-        </div>
-
-        <div style={inputRow}>
-          {speechSupported && (
-            <button onClick={startListening} disabled={loading} title={listening ? "Listening… tap to stop" : "Tap and speak your answer"}
-              className={listening ? "pip-listen" : ""}
-              style={{ ...micBtn, background: listening ? C.coral : C.white, color: listening ? "#fff" : C.purple, borderColor: listening ? C.coral : "#DCD5FB" }}>
-              {listening ? "● Listening" : "🎤"}
-            </button>
-          )}
-          <input value={input} onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder={listening ? "Speak now…" : "Type your answer…"} disabled={loading} style={chatInput} />
-          <button onClick={() => send()} disabled={loading || !input.trim()} className="pip-cta"
-            style={{ ...sendBtn, opacity: loading || !input.trim() ? 0.5 : 1 }}>Send</button>
-        </div>
+        <p style={{ fontSize: 11.5, color: C.inkSoft, marginTop: 12, textAlign: "center" }}>Prizes save when she finishes a booklet (needs the KV store from the README).</p>
       </div>
     </div>
   );
 }
 
-function StickerBook({ game }) {
-  const earned = new Set(game.badges || []);
-  return (
-    <div style={grownBox}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-        <PipScene level={computeLevel(game.totalSparks).level} size={46} />
-        <div style={{ flex: 1 }}><LevelBar total={game.totalSparks} /></div>
-        {(game.streak || 0) > 0 && (
-          <div style={{ textAlign: "center", flexShrink: 0 }}>
-            <div style={{ fontSize: 22 }}>🔥</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.amberDeep }}>{game.streak} day{game.streak === 1 ? "" : "s"}</div>
-          </div>
-        )}
-      </div>
-      <p style={{ ...grownP, marginBottom: 8 }}>My stickers ⭐ ({earned.size}/{BADGES.length})</p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-        {BADGES.map((b) => {
-          const have = earned.has(b.id);
-          return (
-            <div key={b.id} title={b.desc}
-              style={{ ...badgeCell, opacity: have ? 1 : 0.45, filter: have ? "none" : "grayscale(1)" }}>
-              <div style={{ fontSize: 26 }}>{have ? b.emoji : "🔒"}</div>
-              <div style={{ fontSize: 10.5, fontWeight: 700, color: C.ink, marginTop: 3, lineHeight: 1.2 }}>{b.label}</div>
-            </div>
-          );
-        })}
-      </div>
-      <p style={{ ...grownP, color: C.inkSoft, fontSize: 11.5, marginTop: 10, marginBottom: 0 }}>
-        Stickers and levels are saved when she taps Done 👋 (needs the KV namespace from the README).
-      </p>
-    </div>
-  );
-}
-
-function GrownupsNote({ buddyName = "Pip", progress, progressLoading, onLoadProgress }) {
-  return (
-    <div style={grownBox}>
-      <p style={grownP}><b>How to get the most from {buddyName}</b></p>
-      <ul style={grownUl}>
-        <li>Sit with her for the first few sessions. {buddyName} guides, but your presence keeps her relaxed.</li>
-        <li>Keep it short — 10–15 minutes is plenty at age 9. Stop while it's still fun.</li>
-        <li>Praise the trying, not just the right answer. The "effort sparks" counter is there for exactly that.</li>
-        <li>Tap <b>Done 👋</b> at the end so {buddyName} remembers where she got to next time.</li>
-        <li>If a topic keeps causing frustration, that's the gap. Use "Find my starting point" to locate it, then go one level easier.</li>
-      </ul>
-
-      <div style={{ borderTop: "1px solid #EFE3CE", margin: "4px 0 12px" }} />
-      <p style={{ ...grownP, marginBottom: 8 }}>📈 Progress log</p>
-      {progress === null ? (
-        <button onClick={onLoadProgress} disabled={progressLoading} className="pip-chip"
-          style={{ ...chip, background: C.white, color: C.purple, borderColor: C.purpleSoft }}>
-          {progressLoading ? "Loading…" : "View her progress notes"}
-        </button>
-      ) : progress.length === 0 ? (
-        <p style={{ color: C.inkSoft, fontSize: 13, margin: 0 }}>
-          No notes yet. They appear after she taps <b>Done 👋</b> at the end of a session.
-          (Requires the KV namespace from the README.)
-        </p>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {progress.map((n, i) => (
-            <div key={i} style={{ background: C.white, border: "1px solid #EFE3CE", borderRadius: 12, padding: "9px 12px" }}>
-              <div style={{ fontSize: 11.5, color: C.inkSoft, fontWeight: 700, marginBottom: 3 }}>{n.date}</div>
-              <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.5 }}>{n.note}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <p style={{ ...grownP, color: C.inkSoft, fontSize: 12, marginTop: 12 }}>
-        {buddyName} is an AI helper, not a replacement for her teacher. For a persistent struggle, a short stint with a human tutor who can watch her face will still beat any app.
-      </p>
-    </div>
-  );
-}
-
-// ── styles ───────────────────────────────────────────────────────────
-const wrap = { minHeight: "100%", background: `radial-gradient(120% 80% at 50% 0%, ${C.cream2} 0%, ${C.cream} 55%)`, fontFamily: "'Nunito', system-ui, sans-serif", padding: "20px 14px", display: "flex", justifyContent: "center", alignItems: "flex-start", boxSizing: "border-box" };
-const card = { width: "100%", maxWidth: 560, background: C.white, borderRadius: 28, padding: 26, boxShadow: "0 18px 50px -22px rgba(45,48,71,0.35), 0 2px 0 #F2E7D4", boxSizing: "border-box" };
-const h1 = { fontFamily: "'Baloo 2', sans-serif", fontSize: 30, color: C.ink, textAlign: "center", margin: "8px 0 0" };
-const sub = { color: C.inkSoft, textAlign: "center", fontSize: 15, lineHeight: 1.5, margin: "0 auto", maxWidth: 380 };
-const fieldLabel = { fontFamily: "'Baloo 2', sans-serif", color: C.ink, fontSize: 15, display: "block", margin: "20px 0 8px" };
-const textInput = { width: "100%", boxSizing: "border-box", padding: "13px 16px", fontSize: 16, borderRadius: 14, border: "2px solid #EADFCB", outline: "none", fontFamily: "'Nunito', sans-serif", color: C.ink, background: C.cream };
-const chipWrap = { display: "flex", flexWrap: "wrap", gap: 8 };
-const chip = { border: "2px solid", borderRadius: 999, padding: "9px 14px", fontSize: 13.5, fontFamily: "'Nunito', sans-serif", fontWeight: 700, cursor: "pointer" };
-const cta = { width: "100%", marginTop: 22, padding: "15px", fontSize: 18, fontFamily: "'Baloo 2', sans-serif", fontWeight: 700, color: C.white, background: `linear-gradient(180deg, ${C.amber}, ${C.amberDeep})`, border: "none", borderRadius: 16, boxShadow: "0 8px 18px -8px rgba(245,146,34,0.7)" };
-const ctaAlt = { width: "100%", marginTop: 10, padding: "13px", fontSize: 16, fontFamily: "'Baloo 2', sans-serif", fontWeight: 700, color: C.purple, background: C.purpleSoft, border: "2px solid #DCD5FB", borderRadius: 16 };
-const choiceBtn = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, width: "100%", textAlign: "left", border: "2px solid", borderRadius: 14, padding: "14px 16px", fontSize: 16.5, fontFamily: "'Nunito', sans-serif", fontWeight: 700, cursor: "pointer" };
-const grownToggle = { width: "100%", marginTop: 14, padding: "10px", fontSize: 13.5, color: C.inkSoft, background: "transparent", border: "none", cursor: "pointer", fontFamily: "'Nunito', sans-serif", fontWeight: 700 };
-const grownBox = { background: C.cream, borderRadius: 16, padding: "14px 16px", marginTop: 4, border: "1px solid #EFE3CE" };
-const grownP = { fontFamily: "'Baloo 2', sans-serif", color: C.ink, margin: "0 0 8px", fontSize: 14 };
-const grownUl = { margin: "0 0 10px", paddingLeft: 18, color: C.ink, fontSize: 13.5, lineHeight: 1.6 };
-const header = { display: "flex", alignItems: "center", gap: 11, padding: "14px 16px", borderBottom: "1px solid #F2E7D4", background: C.cream };
-const sparkBox = { display: "flex", alignItems: "center", gap: 4, fontSize: 18, background: C.white, borderRadius: 999, padding: "5px 11px", border: "1px solid #F0E4CF" };
-const doneBtn = { border: "1.5px solid #E7DCC7", background: C.white, color: C.inkSoft, borderRadius: 999, padding: "7px 12px", fontSize: 13, fontFamily: "'Nunito', sans-serif", fontWeight: 700, cursor: "pointer" };
-const levelUpCard = { marginTop: 14, background: `linear-gradient(180deg, #FFF6E6, #FFEFD2)`, border: "1.5px solid #FFD98A", borderRadius: 16, padding: "12px 14px", color: C.ink, fontSize: 14.5, fontFamily: "'Nunito', sans-serif" };
-const streakCard = { marginTop: 10, background: "#FFF1E8", border: "1.5px solid #FFD2B3", borderRadius: 16, padding: "11px 14px", color: C.ink, fontSize: 14, fontFamily: "'Nunito', sans-serif" };
-const badgeEarned = { background: C.white, border: "1.5px solid #FFE0A6", borderRadius: 16, padding: "12px 10px", width: 96, boxShadow: "0 6px 16px -10px rgba(245,146,34,0.6)" };
-const badgeCell = { background: C.white, border: "1px solid #EFE3CE", borderRadius: 14, padding: "10px 6px", textAlign: "center" };
-const topicStrip = { display: "flex", gap: 7, padding: "10px 14px", overflowX: "auto", borderBottom: "1px solid #F6EEDF", whiteSpace: "nowrap" };
-const miniChip = { border: "1.5px solid", borderRadius: 999, padding: "6px 11px", fontSize: 12, fontFamily: "'Nunito', sans-serif", fontWeight: 700, cursor: "pointer", flexShrink: 0 };
-const chatArea = { flex: 1, overflowY: "auto", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 12, background: `linear-gradient(180deg, ${C.white}, ${C.cream})` };
-const rowLeft = { display: "flex", gap: 8, alignItems: "flex-start", maxWidth: "92%" };
-const rowRight = { display: "flex", justifyContent: "flex-end" };
-const bubblePip = { background: C.white, border: "1.5px solid #F1E6D2", color: C.ink, padding: "11px 14px", borderRadius: "16px 16px 16px 5px", fontSize: 15.5, lineHeight: 1.5, whiteSpace: "pre-wrap", boxShadow: "0 4px 14px -10px rgba(45,48,71,0.4)" };
-const bubbleKid = { background: `linear-gradient(180deg, ${C.purple}, #5a4bd6)`, color: C.white, padding: "11px 14px", borderRadius: "16px 16px 5px 16px", fontSize: 15.5, lineHeight: 1.5, maxWidth: "80%", whiteSpace: "pre-wrap", boxShadow: "0 6px 16px -10px rgba(108,92,231,0.8)" };
-const helperRow = { display: "flex", gap: 7, padding: "10px 12px 4px", flexWrap: "wrap", justifyContent: "center" };
-const help = { border: "1.5px solid", borderRadius: 999, padding: "8px 13px", fontSize: 13, fontFamily: "'Nunito', sans-serif", fontWeight: 700, cursor: "pointer" };
-const inputRow = { display: "flex", gap: 8, padding: "8px 12px 14px" };
-const chatInput = { flex: 1, padding: "13px 16px", fontSize: 16, borderRadius: 14, border: "2px solid #EADFCB", outline: "none", fontFamily: "'Nunito', sans-serif", color: C.ink, background: C.cream, minWidth: 0 };
-const micBtn = { flexShrink: 0, padding: "0 14px", fontSize: 15, fontFamily: "'Nunito', sans-serif", fontWeight: 700, border: "2px solid", borderRadius: 14, cursor: "pointer", whiteSpace: "nowrap" };
-const sendBtn = { padding: "0 20px", fontSize: 16, fontFamily: "'Baloo 2', sans-serif", fontWeight: 700, color: C.white, background: `linear-gradient(180deg, ${C.amber}, ${C.amberDeep})`, border: "none", borderRadius: 14, cursor: "pointer" };
-const errBtn = { background: "#FFF0F0", color: C.coral, border: "1.5px solid #FFD9D9", borderRadius: 12, padding: "10px 14px", fontSize: 13.5, cursor: "pointer", fontFamily: "'Nunito', sans-serif", fontWeight: 700 };
+// ── styles ──
+const F = { head: "'Baloo 2', system-ui, sans-serif", body: "'Nunito', system-ui, sans-serif" };
+const shell = { minHeight: "100%", background: `radial-gradient(130% 90% at 50% -10%, #FFE7F4 0%, #EAF4FF 45%, #FFF8EE 100%)`, fontFamily: F.body, padding: "18px 12px", display: "flex", justifyContent: "center", alignItems: "flex-start", boxSizing: "border-box" };
+const card = { width: "100%", maxWidth: 560, background: "rgba(255,255,255,0.96)", borderRadius: 28, padding: 22, boxShadow: "0 20px 50px -22px rgba(80,50,140,0.4)", boxSizing: "border-box" };
+const h1 = { fontFamily: F.head, fontSize: 30, color: C.ink, margin: "8px 0 0", textAlign: "center" };
+const sub = { color: C.inkSoft, fontSize: 15, textAlign: "center", margin: "4px auto 0", maxWidth: 360, lineHeight: 1.5, fontWeight: 600 };
+const input = { width: "100%", boxSizing: "border-box", padding: "14px 16px", fontSize: 16, borderRadius: 16, border: "2px solid #E4DAF5", outline: "none", fontFamily: F.body, color: C.ink, background: C.cream };
+const cta = { width: "100%", marginTop: 16, padding: "15px", fontSize: 18, fontFamily: F.head, fontWeight: 800, color: "#fff", background: `linear-gradient(180deg, ${C.purple}, #6a48f0)`, border: "none", borderRadius: 18, boxShadow: `0 7px 0 -1px #5a3ad6`, cursor: "pointer" };
+const softBtn = { width: "100%", marginTop: 10, padding: "12px", fontSize: 15, fontFamily: F.head, fontWeight: 800, color: C.purple, background: C.purpleSoft, border: "2px solid #DCD0FB", borderRadius: 16, cursor: "pointer" };
+const iconBtn = { width: 40, height: 40, flexShrink: 0, fontSize: 16, background: "#fff", border: "1.5px solid #ECE3FB", borderRadius: 12, cursor: "pointer", fontWeight: 800, color: C.ink };
+const hud = { display: "flex", alignItems: "center", gap: 10, padding: "14px 16px 8px" };
+const choice = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, width: "100%", textAlign: "left", border: "2.5px solid", borderRadius: 16, padding: "15px 16px", fontSize: 17, fontFamily: F.body, fontWeight: 800, cursor: "pointer", boxShadow: "0 3px 0 -1px rgba(0,0,0,0.05)" };
+const feedback = { marginTop: 14, background: "#FFFDF6", border: "2px solid", borderRadius: 16, padding: "12px 14px", fontSize: 14.5, color: C.ink, lineHeight: 1.5, fontWeight: 600 };
+const hintBox = { marginTop: 12, background: "#FFF7E6", border: "2px solid #FFE0A6", borderRadius: 14, padding: "11px 14px", fontSize: 14, color: C.ink, fontWeight: 700 };
+const banner = { marginTop: 12, background: "#EEF8F1", border: "2px solid #BFE9D2", borderRadius: 16, padding: "11px 14px", fontSize: 14.5, color: C.ink, fontWeight: 700 };
+const prizePill = { background: "#fff", border: "2px solid #ECE3FB", borderRadius: 14, padding: "10px 16px", fontFamily: F.head, fontWeight: 800, color: C.ink, fontSize: 18 };
+const badgeCard = { background: "#fff", border: "2px solid #FFE0A6", borderRadius: 14, padding: "10px 8px", width: 92 };
+const modalWrap = { position: "fixed", inset: 0, background: "rgba(43,35,80,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, zIndex: 50 };
+const statCard = { flex: 1, background: C.cream, border: "1.5px solid #ECE3FB", borderRadius: 14, padding: "10px 4px", textAlign: "center", fontSize: 20, fontFamily: F.head, color: C.ink, lineHeight: 1.4 };
+const statLbl = { fontSize: 10.5, color: C.inkSoft, fontWeight: 700 };
 
 function Style() {
   return (
     <style>{`
       html,body,#root{height:100%}
-      .pip-float { animation: pipFloat 3.4s ease-in-out infinite; }
-      @keyframes pipFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
-      .pip-think { animation: pipNod 1s ease-in-out infinite; }
-      @keyframes pipNod { 0%,100%{transform:rotate(-4deg)} 50%{transform:rotate(4deg)} }
-      .pip-msg { animation: pipIn 0.28s ease both; }
-      @keyframes pipIn { from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)} }
-      .pip-pop { animation: pipPop 0.45s cubic-bezier(.2,1.3,.4,1) both; }
-      @keyframes pipPop { from{opacity:0; transform:scale(.6)} to{opacity:1; transform:scale(1)} }
-      .pip-mouth { animation: pipTalk .28s ease-in-out infinite; }
-      @keyframes pipTalk { 0%,100%{transform:scaleY(.45)} 50%{transform:scaleY(1.1)} }
-      .pip-ring { animation: pipRing 1s ease-in-out infinite; }
-      @keyframes pipRing { 0%,100%{opacity:.5} 50%{opacity:1} }
-      .pip-listen { animation: pipListen .9s ease-in-out infinite; }
-      @keyframes pipListen { 0%,100%{box-shadow:0 0 0 0 rgba(255,123,123,.5)} 50%{box-shadow:0 0 0 7px rgba(255,123,123,0)} }
-      .pip-dot { width:7px; height:7px; border-radius:50%; background:${C.amber}; display:inline-block; animation: pipBlink 1.2s infinite; }
-      .pip-dot:nth-child(2){ animation-delay:.2s } .pip-dot:nth-child(3){ animation-delay:.4s }
-      @keyframes pipBlink { 0%,80%,100%{opacity:.3; transform:translateY(0)} 40%{opacity:1; transform:translateY(-3px)} }
-      .pip-cta:hover:not(:disabled){ filter:brightness(1.05); transform:translateY(-1px) }
-      .pip-cta{ transition:transform .12s, filter .12s }
-      .pip-chip:hover{ filter:brightness(0.99); transform:translateY(-1px) } .pip-chip{ transition:transform .12s }
-      .pip-help:hover:not(:disabled){ filter:brightness(0.97) }
-      .pip-strip::-webkit-scrollbar{ height:0 } .pip-strip{ scrollbar-width:none }
-      input::placeholder{ color:#B9B2C9 }
+      *{ -webkit-tap-highlight-color: transparent; }
+      .g-btn{ transition: transform .1s; }
+      .g-btn:active:not(:disabled){ transform: translateY(2px); }
+      .g-float{ animation: gFloat 3.2s ease-in-out infinite; }
+      .g-float2{ animation: gFloat 4s ease-in-out infinite; }
+      @keyframes gFloat{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+      .g-pulse{ animation: gPulse 1.5s ease-in-out infinite; }
+      @keyframes gPulse{ 0%,100%{box-shadow:0 0 0 0 rgba(124,92,252,.4)} 50%{box-shadow:0 0 0 10px rgba(124,92,252,0)} }
+      .g-pop{ animation: gPop .45s cubic-bezier(.2,1.4,.4,1) both; }
+      @keyframes gPop{ from{opacity:0; transform:scale(.6)} to{opacity:1; transform:scale(1)} }
+      .g-mouth{ animation: gTalk .28s ease-in-out infinite; }
+      @keyframes gTalk{ 0%,100%{transform:scaleY(.45)} 50%{transform:scaleY(1.1)} }
+      .g-ring{ animation: gRing 1s ease-in-out infinite; }
+      @keyframes gRing{ 0%,100%{opacity:.5} 50%{opacity:1} }
+      .g-spark{ animation: gSpark 1.2s ease-in-out infinite; }
+      @keyframes gSpark{ 0%,100%{opacity:.2} 50%{opacity:1} }
+      .g-glow{ animation: gGlow 1.6s ease-in-out infinite; }
+      @keyframes gGlow{ 0%,100%{opacity:.4} 50%{opacity:.85} }
+      .g-confetti{ position:absolute; top:-12px; width:9px; height:14px; border-radius:2px; animation: gFall 1.6s linear forwards; }
+      @keyframes gFall{ to{ transform: translateY(420px) rotate(540deg); opacity:0 } }
+      input::placeholder{ color:#B7AED0 }
       @media (max-width:480px){ h1{font-size:26px} }
     `}</style>
   );

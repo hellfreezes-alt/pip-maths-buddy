@@ -1,13 +1,14 @@
 # Pip — your child's maths buddy 🌟
 
-This turns the files in this folder into a friendly talking maths tutor your child
-can open on a tablet or phone. You set it up once. No coding needed — just clicking
-and copy-pasting.
+This turns the files in this folder into **Maths Quest** — a colourful, tappable maths
+game your child can play on a tablet or phone. You set it up once. No coding needed —
+just clicking and copy-pasting.
 
-It includes a **Learning Path**: 10 Grade-3 units in order (place value, +/−, times
-tables, division, fractions, measurement, money, time, shapes, word problems). Your
-child learns each unit with the teacher, then takes a short **Unit Check** — scoring
-4 out of 5 masters the unit, earns a medal, and unlocks the next one.
+It's a journey map of **10 question booklets** (place value, +/−, times tables, division,
+fractions, measurement, money, time, shapes, word problems) that unlock in order and get
+harder. Each booklet is 10 tappable multiple-choice questions (read aloud by a friendly
+teacher voice, with a hint button). Finish one to open a **treasure chest** and win stars,
+coins, medals and level-ups. Score 70%+ to clear a booklet and unlock the next.
 
 Take your time — about 30–40 minutes the first time. If a button looks slightly
 different from what's written here, don't worry; the websites change their wording

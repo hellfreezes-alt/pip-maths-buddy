@@ -4,7 +4,7 @@
 // Needs the PIP_KV namespace bound (see README). Without it, the game still
 // runs during a session but won't persist between sessions.
 
-const DEFAULT = { totalSparks: 0, sessions: 0, topics: [], badges: [], usedStuck: false, streak: 0, lastDate: "", mastered: [], unitScores: {} };
+const DEFAULT = { totalSparks: 0, coins: 0, sessions: 0, stars: {}, mastered: [], badges: [], streak: 0, lastDate: "" };
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -42,18 +42,18 @@ export async function onRequestPost(context) {
 
 function sanitize(s) {
   s = s || {};
+  const num = (v, max) => Math.max(0, Math.min(max, Number(v) || 0));
   return {
-    totalSparks: Math.max(0, Math.min(100000, Number(s.totalSparks) || 0)),
-    sessions: Math.max(0, Math.min(100000, Number(s.sessions) || 0)),
-    topics: Array.isArray(s.topics) ? s.topics.filter((t) => typeof t === "string").slice(0, 40) : [],
-    badges: Array.isArray(s.badges) ? s.badges.filter((b) => typeof b === "string").slice(0, 60) : [],
-    usedStuck: !!s.usedStuck,
-    streak: Math.max(0, Math.min(100000, Number(s.streak) || 0)),
-    lastDate: typeof s.lastDate === "string" ? s.lastDate.slice(0, 10) : "",
-    mastered: Array.isArray(s.mastered) ? s.mastered.filter((m) => typeof m === "string").slice(0, 60) : [],
-    unitScores: (s.unitScores && typeof s.unitScores === "object")
-      ? Object.fromEntries(Object.entries(s.unitScores).slice(0, 60).map(([k, v]) => [String(k).slice(0, 40), Math.max(0, Math.min(100, Number(v) || 0))]))
+    totalSparks: num(s.totalSparks, 1e7),
+    coins: num(s.coins, 1e7),
+    sessions: num(s.sessions, 1e7),
+    stars: (s.stars && typeof s.stars === "object")
+      ? Object.fromEntries(Object.entries(s.stars).slice(0, 60).map(([k, v]) => [String(k).slice(0, 40), num(v, 3)]))
       : {},
+    mastered: Array.isArray(s.mastered) ? s.mastered.filter((m) => typeof m === "string").slice(0, 60) : [],
+    badges: Array.isArray(s.badges) ? s.badges.filter((b) => typeof b === "string").slice(0, 60) : [],
+    streak: num(s.streak, 1e7),
+    lastDate: typeof s.lastDate === "string" ? s.lastDate.slice(0, 10) : "",
   };
 }
 
