@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Detective Koel &amp; the Mystery Mansion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@600;700;800;900&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f4eee0; --ink:#272140; --ink-soft:#5b5470;
+  --math:#f5862b; --math2:#ffc23d; --math-deep:#d9641a;
+  --eng:#1f9aa0; --eng2:#54c9ce; --eng-deep:#157278;
+  --gold:#e0a325; --good:#3aa981; --good-deep:#2c8466; --bad:#e0573e;
+  --card:#fffdf8; --line:#e2d4b6; --shadow:rgba(39,33,64,.16);
+  --accent:var(--math); --accent2:var(--math2); --accent-deep:var(--math-deep);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{font-family:"Nunito",system-ui,sans-serif; color:var(--ink); min-height:100vh;
+  background:
+    radial-gradient(circle at 12% 14%, rgba(255,194,61,.18), transparent 40%),
+    radial-gradient(circle at 88% 86%, rgba(84,201,206,.16), transparent 42%),
+    repeating-linear-gradient(45deg, rgba(150,120,70,.04) 0 2px, transparent 2px 24px),
+    var(--paper);
+  background-attachment:fixed; display:flex; justify-content:center; padding:14px;}
+.wrap{width:100%; max-width:580px;}
+.eyebrow{font-family:"Special Elite",monospace; letter-spacing:2px; text-transform:uppercase; font-size:.7rem; color:var(--accent-deep);}
+.view{display:none; animation:fade .35s ease both;}
+.view.active{display:block;}
+@keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+.btn{font-family:"Fredoka",sans-serif; font-weight:600; font-size:1.15rem; border:none; border-radius:18px;
+  padding:15px 20px; cursor:pointer; width:100%; color:#fff;
+  background:linear-gradient(180deg,var(--accent2),var(--accent));
+  box-shadow:0 5px 0 var(--accent-deep),0 8px 16px var(--shadow); transition:transform .08s,box-shadow .08s; letter-spacing:.3px;}
+.btn:active{transform:translateY(4px); box-shadow:0 1px 0 var(--accent-deep),0 4px 10px var(--shadow);}
+.btn.ghost{background:#fff; color:var(--accent-deep); box-shadow:0 4px 0 var(--line),0 8px 16px var(--shadow);}
+.btn[disabled]{filter:grayscale(.5) opacity(.6); pointer-events:none;}
+
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:14px;}
+.brand{font-family:"Fredoka",sans-serif; font-weight:700; font-size:1.15rem; display:flex; align-items:center; gap:7px;}
+.coins{font-family:"Fredoka",sans-serif; font-weight:700; background:var(--ink); color:#fff; border-radius:99px;
+  padding:8px 14px; font-size:1rem; box-shadow:0 4px 10px var(--shadow); white-space:nowrap;}
+.coins b{color:var(--math2);}
+
+.hero{background:var(--card); border:2px solid var(--line); border-radius:24px; padding:22px 20px; box-shadow:0 10px 26px var(--shadow); position:relative; overflow:hidden; margin-bottom:14px;}
+.hero::before{content:"DETECTIVE HQ"; position:absolute; top:14px; right:-36px; transform:rotate(34deg);
+  background:var(--bad); color:#fff; font-family:"Special Elite",monospace; font-size:.6rem; letter-spacing:1px; padding:5px 42px; box-shadow:0 3px 8px var(--shadow);}
+.hero h1{font-family:"Fredoka",sans-serif; font-weight:700; font-size:1.9rem; line-height:1.05; margin:.3rem 0;}
+.hero p{color:var(--ink-soft); font-weight:700; line-height:1.5; font-size:1rem;}
+.daychip{display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:.82rem; background:#eef7f2; color:var(--good-deep); border:1.5px solid #c9e6d8; border-radius:99px; padding:5px 12px; margin-top:10px;}
+.daychip.full{background:#fdeee9; color:var(--bad); border-color:#f3c9bd;}
+
+.menu{display:grid; gap:12px;}
+.mcard{display:flex; align-items:center; gap:14px; text-align:left; border:2px solid var(--line); border-radius:20px;
+  background:var(--card); padding:16px; cursor:pointer; box-shadow:0 6px 16px var(--shadow); transition:transform .1s;}
+.mcard:active{transform:scale(.98);}
+.mcard .ic{font-size:2.4rem; width:58px; height:58px; border-radius:16px; display:flex; align-items:center; justify-content:center; flex:0 0 auto;}
+.mcard.math .ic{background:linear-gradient(180deg,#fff0d6,#ffe0a8);}
+.mcard.eng .ic{background:linear-gradient(180deg,#dbf5f3,#bfeae6);}
+.mcard.rew .ic{background:linear-gradient(180deg,#ffe6ef,#ffc9dd);}
+.mcard h3{font-family:"Fredoka",sans-serif; font-weight:600; font-size:1.25rem; margin:0 0 2px;}
+.mcard p{margin:0; color:var(--ink-soft); font-weight:700; font-size:.85rem;}
+.mcard .go{margin-left:auto; font-size:1.4rem;}
+.mcard.math .go{color:var(--math-deep);} .mcard.eng .go{color:var(--eng-deep);} .mcard.rew .go{color:#c43f73;}
+.progresschip{font-size:.72rem; font-weight:800; color:var(--good-deep); background:#e7f4ee; border-radius:99px; padding:2px 8px; margin-top:4px; display:inline-block;}
+
+.backbtn{background:none; border:none; font-family:"Fredoka",sans-serif; font-weight:600; font-size:1rem; color:var(--ink-soft); cursor:pointer; padding:6px 0; display:flex; align-items:center; gap:5px;}
+
+/* test list */
+.testlist{display:grid; gap:11px;}
+.tcard{display:flex; align-items:center; gap:13px; border:2px solid var(--line); border-radius:18px; background:var(--card); padding:14px; box-shadow:0 5px 14px var(--shadow); cursor:pointer; transition:transform .1s;}
+.tcard:active{transform:scale(.98);}
+.tcard .num{font-family:"Fredoka",sans-serif; font-weight:700; font-size:1.2rem; width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:var(--paper); flex:0 0 auto; color:var(--accent-deep);}
+.tcard h3{font-family:"Fredoka",sans-serif; font-weight:600; font-size:1.08rem; margin:0;}
+.tcard p{margin:2px 0 0; color:var(--ink-soft); font-weight:700; font-size:.78rem;}
+.tcard .st{margin-left:auto; text-align:right; font-size:.78rem; font-weight:800; white-space:nowrap;}
+.tcard .st .stars{font-size:.9rem; letter-spacing:1px; color:var(--gold);}
+.tcard.done{border-color:#bfe3d3;}
+
+/* floors */
+.floors{display:grid; gap:12px; margin-top:6px;}
+.floor{border:2px solid var(--line); border-radius:20px; background:var(--card); padding:16px; box-shadow:0 6px 16px var(--shadow); display:flex; align-items:center; gap:14px;}
+.floor .badge{font-size:2.2rem; width:54px; height:54px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:var(--paper); flex:0 0 auto;}
+.floor h3{font-family:"Fredoka",sans-serif; font-weight:600; margin:0; font-size:1.15rem;}
+.floor .meta{margin:2px 0 0; color:var(--ink-soft); font-weight:700; font-size:.82rem;}
+.floor .right{margin-left:auto; text-align:right;}
+.floor.locked{opacity:.55;} .floor.locked .badge{filter:grayscale(1);}
+.lockmsg{font-size:.78rem; font-weight:800; color:var(--ink-soft);}
+.cleartick{font-size:.8rem; font-weight:800; color:var(--good-deep);}
+.ptsbadge{font-size:.72rem; font-weight:800; color:var(--accent-deep);}
+.starline{font-size:.95rem; letter-spacing:1px; color:var(--gold);}
+
+/* HUD */
+.hud{display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--ink); color:#fff; border-radius:16px; padding:10px 14px; margin-bottom:12px; box-shadow:0 6px 14px var(--shadow);}
+.hud .stat{display:flex; flex-direction:column; align-items:center; line-height:1; flex:1;}
+.hud .stat .v{font-family:"Fredoka",sans-serif; font-weight:700; font-size:1.25rem;}
+.hud .stat .l{font-size:.58rem; letter-spacing:1px; text-transform:uppercase; opacity:.75; margin-top:3px;}
+.hud .divide{width:1px; align-self:stretch; background:rgba(255,255,255,.18);}
+.hearts{font-size:1.1rem; letter-spacing:1px;}
+.flame.lit{animation:flick .5s ease infinite alternate;}
+@keyframes flick{from{transform:scale(1);}to{transform:scale(1.18) rotate(-4deg);}}
+
+.progress{display:flex; align-items:center; gap:8px; margin-bottom:10px;}
+.bar{flex:1; height:11px; background:#eaddc2; border-radius:99px; overflow:hidden; border:1px solid var(--line);}
+.bar i{display:block; height:100%; width:0%; border-radius:99px; background:linear-gradient(90deg,var(--accent2),var(--accent)); transition:width .4s;}
+.progress .lab{font-family:"Fredoka",sans-serif; font-weight:600; font-size:.82rem; color:var(--ink-soft); white-space:nowrap;}
+
+.qcard{background:var(--card); border:2px solid var(--line); border-radius:22px; padding:18px; box-shadow:0 10px 24px var(--shadow); margin-bottom:12px;}
+.passage{background:linear-gradient(180deg,#fbfdff,#eef5f8); border:1.5px solid var(--line); border-radius:14px; padding:12px 14px; font-size:.95rem; line-height:1.5; font-weight:700; color:var(--ink); margin-bottom:12px;}
+.qtag{font-family:"Special Elite",monospace; font-size:.66rem; letter-spacing:1px; color:var(--accent-deep); text-transform:uppercase;}
+.qtext{font-family:"Fredoka",sans-serif; font-weight:600; font-size:1.45rem; margin:6px 0 2px; line-height:1.22;}
+.opts{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px;}
+.opt{font-family:"Fredoka",sans-serif; font-weight:600; font-size:1.3rem; background:#fff; border:2px solid var(--line);
+  border-radius:16px; padding:16px 6px; cursor:pointer; transition:transform .08s,background .15s,border-color .15s; box-shadow:0 4px 0 var(--line); min-height:56px;}
+.opt:active{transform:translateY(3px); box-shadow:0 1px 0 var(--line);}
+.opt.correct{background:var(--good); color:#fff; border-color:var(--good-deep); box-shadow:0 4px 0 var(--good-deep);}
+.opt.wrong{background:var(--bad); color:#fff; border-color:#b23c2b; box-shadow:0 4px 0 #b23c2b; animation:shake .3s;}
+.opt.lock{pointer-events:none;} .opt.fade{opacity:.45;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
+
+/* typed answer */
+.typewrap{margin-top:16px; display:flex; gap:9px;}
+.typein{flex:1; font-family:"Fredoka",sans-serif; font-weight:600; font-size:1.4rem; text-align:center;
+  border:2px solid var(--line); border-radius:16px; padding:14px 12px; background:#fff; color:var(--ink); outline:none; min-width:0;}
+.typein:focus{border-color:var(--accent);}
+.typein.correct{border-color:var(--good-deep); background:#e9f7f0; color:var(--good-deep);}
+.typein.wrong{border-color:var(--bad); background:#fdeee9; color:var(--bad); animation:shake .3s;}
+.typego{flex:0 0 auto; font-family:"Fredoka",sans-serif; font-weight:600; font-size:1.15rem; color:#fff; border:none; border-radius:16px; padding:0 20px; cursor:pointer; background:linear-gradient(180deg,var(--accent2),var(--accent)); box-shadow:0 4px 0 var(--accent-deep);}
+.typego:active{transform:translateY(2px); box-shadow:0 1px 0 var(--accent-deep);}
+.spellnote{text-align:center; font-size:.82rem; color:var(--ink-soft); font-weight:700; margin-top:8px;}
+.spelltools{display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap;}
+.spelltool{font-family:"Fredoka",sans-serif; font-weight:600; font-size:1rem; color:var(--accent-deep); background:#fff; border:2px solid var(--line); border-radius:14px; padding:10px 16px; cursor:pointer; box-shadow:0 3px 0 var(--line);}
+.spelltool:active{transform:translateY(2px); box-shadow:0 1px 0 var(--line);}
+.spelltool[disabled]{background:var(--paper); color:var(--accent-deep);}
+
+.feedback{min-height:24px; text-align:center; font-family:"Fredoka",sans-serif; font-weight:600; font-size:1rem; margin-top:10px;}
+.feedback.good{color:var(--good-deep);} .feedback.bad{color:var(--bad);}
+.hintline{text-align:center; font-size:.85rem; color:var(--ink-soft); font-weight:700; margin-top:6px; min-height:18px;}
+
+.panel{text-align:center; background:var(--card); border:2px solid var(--line); border-radius:24px; padding:26px 20px; box-shadow:0 12px 30px var(--shadow); position:relative; overflow:hidden;}
+.panel .seal{font-size:4rem; line-height:1; animation:pop .6s cubic-bezier(.2,1.5,.4,1) both;}
+@keyframes pop{from{transform:scale(0) rotate(-18deg);}to{transform:scale(1) rotate(0);}}
+.panel h2{font-family:"Fredoka",sans-serif; font-weight:700; font-size:1.55rem; margin:.3rem 0;}
+.panel .rank{display:inline-block; font-family:"Special Elite",monospace; background:var(--accent); color:#fff; padding:5px 16px; border-radius:99px; letter-spacing:1px; margin:.3rem 0 .5rem; font-size:.85rem;}
+.bigstars{font-size:1.9rem; letter-spacing:6px; margin:.2rem 0 .3rem; color:var(--gold);}
+.scoreboard{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0;}
+.sb{background:var(--paper); border:2px solid var(--line); border-radius:16px; padding:11px 4px;}
+.sb .v{font-family:"Fredoka",sans-serif; font-weight:700; font-size:1.35rem; color:var(--accent-deep);}
+.sb .l{font-size:.58rem; letter-spacing:1px; text-transform:uppercase; color:var(--ink-soft); font-weight:800;}
+.rewardpop{background:linear-gradient(180deg,#fff6dc,#ffe9b8); border:2px dashed var(--gold); border-radius:16px; padding:12px; margin:6px 0 12px; font-weight:800; font-family:"Fredoka",sans-serif; color:#8a5a00;}
+
+/* rewards */
+.piggy{background:linear-gradient(180deg,#fff3da,#ffe6b0); border:2px solid #f0cf86; border-radius:24px; padding:22px 18px; text-align:center; box-shadow:0 10px 26px var(--shadow); margin-bottom:14px;}
+.piggy .amt{font-family:"Fredoka",sans-serif; font-weight:700; font-size:2.6rem; color:var(--math-deep); line-height:1;}
+.piggy .cap{font-weight:800; color:#9a6a16; font-size:.85rem; margin-top:4px;}
+.statgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;}
+.statbox{background:var(--card); border:2px solid var(--line); border-radius:16px; padding:12px; text-align:center;}
+.statbox .v{font-family:"Fredoka",sans-serif; font-weight:700; font-size:1.5rem; color:var(--ink);}
+.statbox .l{font-size:.65rem; letter-spacing:1px; text-transform:uppercase; color:var(--ink-soft); font-weight:800;}
+.shopgrid{display:grid; grid-template-columns:1fr 1fr; gap:11px;}
+.gift{background:var(--card); border:2px solid var(--line); border-radius:18px; padding:13px 11px; text-align:center; box-shadow:0 5px 12px var(--shadow); display:flex; flex-direction:column; align-items:center; gap:5px; position:relative;}
+.gift .emoji{font-size:2.1rem;}
+.gift .nm{font-family:"Fredoka",sans-serif; font-weight:600; font-size:.95rem; line-height:1.1;}
+.gift .cost{font-weight:800; color:var(--accent-deep); font-size:.85rem;}
+.gift .redeem{font-family:"Fredoka",sans-serif; font-weight:600; border:none; border-radius:12px; padding:8px 10px; width:100%; cursor:pointer; font-size:.9rem; color:#fff; background:linear-gradient(180deg,var(--math2),var(--math)); box-shadow:0 3px 0 var(--math-deep);}
+.gift .redeem:active{transform:translateY(2px); box-shadow:0 1px 0 var(--math-deep);}
+.gift .redeem[disabled]{background:#d8cdbb; box-shadow:0 3px 0 #b8ad99; color:#fff8; pointer-events:none;}
+.gift .owned{position:absolute; top:7px; right:7px; background:var(--good); color:#fff; font-weight:800; font-size:.62rem; border-radius:99px; padding:2px 7px;}
+.basket{background:var(--card); border:2px solid var(--line); border-radius:18px; padding:14px; margin-top:14px;}
+.basket h3{font-family:"Fredoka",sans-serif; font-weight:600; margin:0 0 8px; font-size:1.05rem;}
+.basket ul{margin:0; padding-left:18px;} .basket li{font-weight:700; margin:3px 0; color:var(--ink-soft);}
+.basket .empty{color:var(--ink-soft); font-weight:700; font-size:.9rem;}
+
+.note{text-align:center; font-size:.72rem; color:var(--ink-soft); margin-top:14px; font-weight:700; line-height:1.5;}
+.tinylink{background:none; border:none; color:var(--ink-soft); text-decoration:underline; font-weight:700; font-size:.78rem; cursor:pointer;}
+.logrow{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:1px solid var(--line);}
+.logrow:last-child{border-bottom:none;}
+.logrow .lt{font-weight:800; color:var(--ink); font-size:.95rem;}
+.logrow .lr{text-align:right; font-weight:800; color:var(--accent-deep); font-size:.85rem; white-space:nowrap;}
+.logrow .ld{color:var(--ink-soft); font-weight:700; font-size:.72rem;}
+.backuprow{display:flex; flex-direction:column;}
+
+/* locked / limit panel */
+.lockcard{background:var(--card); border:2px solid var(--line); border-radius:24px; padding:28px 22px; text-align:center; box-shadow:0 12px 30px var(--shadow);}
+.lockcard .big{font-size:3.4rem;}
+.lockcard h2{font-family:"Fredoka",sans-serif; font-weight:700; font-size:1.5rem; margin:.4rem 0;}
+.lockcard p{color:var(--ink-soft); font-weight:700; line-height:1.5;}
+.pinrow{display:flex; gap:9px; justify-content:center; margin:14px 0 4px;}
+.pinin{width:140px; font-family:"Fredoka",sans-serif; font-weight:700; font-size:1.5rem; letter-spacing:6px; text-align:center; border:2px solid var(--line); border-radius:14px; padding:10px; outline:none;}
+.pinin:focus{border-color:var(--accent);}
+
+.toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(40px); background:var(--ink); color:#fff;
+  font-family:"Fredoka",sans-serif; font-weight:600; padding:12px 20px; border-radius:99px; box-shadow:0 8px 20px var(--shadow); opacity:0; transition:.35s; z-index:60; max-width:90vw; text-align:center;}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+.confetti{position:fixed; top:-10px; font-size:1.4rem; pointer-events:none; z-index:50; animation:fall linear forwards;}
+@keyframes fall{to{transform:translateY(105vh) rotate(360deg); opacity:.9;}}
+
+.delhibanner{background:linear-gradient(180deg,#fff6dc,#ffe6b0); border:2px dashed var(--gold); border-radius:18px; padding:13px 15px; margin-bottom:14px; font-weight:700; color:#8a5a00; font-size:.95rem; line-height:1.45; text-align:center;}
+.readycard .big{font-size:3rem;}
+.readycard h2{font-size:1.55rem;}
+.readycard p{font-size:1.02rem;}
+
+@media (max-width:380px){ .qtext{font-size:1.28rem;} .opt{font-size:1.15rem;} .hero h1{font-size:1.6rem;} }
+
+/* ============ iPad / large-tablet optimization ============ */
+@media (min-width:700px){
+  body{padding:26px;}
+  .wrap{max-width:720px;}
+  .hero{padding:30px 28px; border-radius:28px;}
+  .hero h1{font-size:2.4rem;}
+  .hero p{font-size:1.18rem;}
+  .daychip{font-size:.95rem; padding:7px 16px;}
+  .brand{font-size:1.4rem;}
+  .coins{font-size:1.2rem; padding:10px 18px;}
+  .mcard{padding:20px 22px; border-radius:24px;}
+  .mcard .ic{font-size:3rem; width:74px; height:74px; border-radius:20px;}
+  .mcard h3{font-size:1.55rem;}
+  .mcard p{font-size:1.02rem;}
+  .mcard .go{font-size:1.7rem;}
+  .progresschip{font-size:.85rem;}
+  .btn{font-size:1.3rem; padding:18px 24px; border-radius:20px;}
+  .backbtn{font-size:1.15rem;}
+  .eyebrow{font-size:.82rem;}
+  /* test list & floors in two columns on the wide canvas */
+  .testlist{grid-template-columns:1fr 1fr;}
+  .tcard{padding:18px;}
+  .tcard .num{width:48px; height:48px; font-size:1.35rem;}
+  .tcard h3{font-size:1.18rem;} .tcard p{font-size:.86rem;}
+  .floors{grid-template-columns:1fr; gap:14px;}
+  .floor{padding:20px;}
+  .floor .badge{font-size:2.6rem; width:64px; height:64px;}
+  .floor h3{font-size:1.35rem;} .floor .meta{font-size:.95rem;}
+  /* play screen bigger & roomier */
+  .hud{padding:14px 20px; border-radius:20px;}
+  .hud .stat .v{font-size:1.6rem;} .hud .stat .l{font-size:.66rem;}
+  .hearts{font-size:1.4rem;}
+  .qcard{padding:26px 26px; border-radius:26px;}
+  .passage{font-size:1.15rem; line-height:1.6; padding:16px 18px;}
+  .qtag{font-size:.78rem;}
+  .qtext{font-size:1.95rem; line-height:1.25;}
+  .opts{gap:14px; margin-top:18px;}
+  .opt{font-size:1.6rem; padding:22px 8px; min-height:74px; border-radius:18px;}
+  .typewrap{margin-top:20px; gap:12px;}
+  .typein{font-size:1.7rem; padding:18px 14px;}
+  .typego{font-size:1.35rem; padding:0 26px;}
+  .spellnote{font-size:.95rem;}
+  .spelltool{font-size:1.15rem; padding:12px 20px;}
+  .feedback{font-size:1.2rem;}
+  .hintline{font-size:1rem;}
+  /* result panels */
+  .panel{padding:34px 30px; border-radius:28px;}
+  .panel .seal{font-size:4.8rem;}
+  .panel h2{font-size:1.9rem;}
+  .bigstars{font-size:2.3rem;}
+  .sb .v{font-size:1.6rem;}
+  /* rewards / shop use the extra width */
+  .delhibanner{font-size:1.08rem; padding:16px 18px;}
+  .piggy .amt{font-size:3.2rem;}
+  .statbox .v{font-size:1.8rem;}
+  .shopgrid{grid-template-columns:repeat(3,1fr); gap:14px;}
+  .gift .emoji{font-size:2.5rem;}
+  .gift .nm{font-size:1.05rem;}
+  .gift .redeem{font-size:1rem; padding:10px;}
+  .readycard .big{font-size:3.6rem;}
+  .readycard h2{font-size:1.9rem;}
+  .readycard p{font-size:1.18rem;}
+  .lockcard h2{font-size:1.8rem;}
+  .lockcard p{font-size:1.1rem;}
+  .pinin{font-size:1.7rem; width:170px;}
+}
+@media (min-width:1000px){
+  .wrap{max-width:840px;}
+  .qtext{font-size:2.15rem;}
+  .opt{font-size:1.7rem; min-height:82px;}
+  .shopgrid{grid-template-columns:repeat(4,1fr);}
+}
+
+@media (prefers-reduced-motion:reduce){ *{animation-duration:.001s!important;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- MENU -->
+  <section id="v-menu" class="view active">
+    <div class="topbar"><div class="brand">🔍 Detective Koel</div><div class="coins">⭐ <b id="coinTop">0</b> pts</div></div>
+    <div class="hero">
+      <div class="eyebrow">Detective Koel &amp; the Mystery Mansion</div>
+      <h1>Welcome back, Koel!</h1>
+      <p>Solve a Mystery Mansion by clearing all three floors. Earn points each floor — Easy +10, Medium +15, Hard +20 — then spend them in the gift shop!</p>
+      <span class="daychip" id="dayChip">🗓️ 2 mansions left today</span>
+    </div>
+    <div class="menu">
+      <button class="mcard math" onclick="App.openSubject('math')">
+        <div class="ic">🔢</div>
+        <div><h3>Number Detective</h3><p>Subtraction · Division · Fractions</p><span class="progresschip" id="mathProg">7 cases</span></div>
+        <div class="go">▶</div>
+      </button>
+      <button class="mcard eng" onclick="App.openSubject('eng')">
+        <div class="ic">🔤</div>
+        <div><h3>Word Detective</h3><p>Spelling (type it!) · Reading · Reasoning</p><span class="progresschip" id="engProg">7 cases</span></div>
+        <div class="go">▶</div>
+      </button>
+      <button class="mcard rew" onclick="App.openRewards()">
+        <div class="ic">🎁</div>
+        <div><h3>My Rewards</h3><p>Your points &amp; gift shop</p><span class="progresschip" id="rewProg">0 pts</span></div>
+        <div class="go">▶</div>
+      </button>
+    </div>
+    <p class="note">Progress &amp; points save on this device. She can finish up to <b>2 mansions a day</b>.</p>
+  </section>
+
+  <!-- TEST LIST -->
+  <section id="v-tests" class="view">
+    <button class="backbtn" onclick="App.go('v-menu')">‹ Back to menu</button>
+    <div class="topbar"><div class="brand" id="testsTitle">🔢 Number Detective</div><div class="coins">⭐ <b id="coinTop2">0</b> pts</div></div>
+    <div class="hero" style="padding:16px 18px;">
+      <div class="eyebrow">Choose a Case</div>
+      <h1 id="testsHead" style="font-size:1.4rem;">7 Mystery Mansions</h1>
+      <p id="testsBlurb" style="font-size:.92rem;">Each mansion has 3 floors that get tougher. Finish one to solve the case!</p>
+    </div>
+    <div class="testlist" id="testList"></div>
+    <p class="note" id="testsNote"></p>
+  </section>
+
+  <!-- FLOOR MAP -->
+  <section id="v-floors" class="view">
+    <button class="backbtn" onclick="App.backToTests()">‹ Back to cases</button>
+    <div class="topbar"><div class="brand" id="floorsTitle">Mansion</div><div class="coins">⭐ <b id="coinTop3">0</b> pts</div></div>
+    <div class="hero" style="padding:18px 18px 16px;">
+      <div class="eyebrow" id="floorsCase">Case File</div>
+      <h1 id="floorsHead" style="font-size:1.5rem;">The Mystery Mansion</h1>
+      <p id="floorsBlurb" style="font-size:.95rem;">Clear each floor to climb higher.</p>
+    </div>
+    <div class="floors" id="floorList"></div>
+    <p class="note">Earn 10 + 15 + 20 = up to 45 points for finishing all three floors.</p>
+  </section>
+
+  <!-- GET READY (pencil & paper reminder before each floor) -->
+  <section id="v-ready" class="view">
+    <div class="lockcard readycard">
+      <div class="big">✏️📝</div>
+      <div class="eyebrow" id="readyEye">Ground Floor · Easy</div>
+      <h2 id="readyHead">Get your pencil &amp; paper!</h2>
+      <p><b>Use pencil and paper to work out your answers</b> before you tap or type them. Real detectives show their working! 🔍</p>
+      <div style="height:14px"></div>
+      <button class="btn" id="readyGo">I'm ready — let's go! ▶</button>
+      <div style="height:10px"></div>
+      <button class="btn ghost" onclick="App.quitToFloors()">‹ Back</button>
+    </div>
+  </section>
+
+  <!-- PLAY -->
+  <section id="v-play" class="view">
+    <div class="hud">
+      <div class="stat"><span class="v" id="hScore">0</span><span class="l">Score</span></div>
+      <div class="divide"></div>
+      <div class="stat"><span class="v hearts" id="hHearts">❤️❤️❤️</span><span class="l">Lives</span></div>
+      <div class="divide"></div>
+      <div class="stat"><span class="v"><span id="hFlame" class="flame">🔥</span> <span id="hStreak">0</span></span><span class="l">Streak</span></div>
+    </div>
+    <div class="progress"><div class="bar"><i id="pBar"></i></div><span class="lab" id="pLab">Q 1/7</span></div>
+    <div class="qcard">
+      <div id="passageSlot"></div>
+      <div class="qtag" id="qTag">Floor 1 · Question 1</div>
+      <div class="qtext" id="qText">…</div>
+      <div id="answerArea"></div>
+      <div class="feedback" id="qFb">&nbsp;</div>
+      <div class="hintline" id="qHint">&nbsp;</div>
+    </div>
+    <button class="backbtn" onclick="App.quitToFloors()">‹ Leave floor</button>
+  </section>
+
+  <!-- FLOOR RESULT -->
+  <section id="v-floorend" class="view">
+    <div class="panel">
+      <div class="seal" id="feSeal">🎉</div>
+      <div class="eyebrow" id="feEyebrow">Floor Cleared</div>
+      <h2 id="feHead">Nice work!</h2>
+      <span class="rank" id="feRank">Floor done</span>
+      <div class="bigstars" id="feStars">★★★</div>
+      <div class="rewardpop" id="fePts">+10 points!</div>
+      <div class="scoreboard">
+        <div class="sb"><div class="v" id="feScore">0</div><div class="l">Floor Points</div></div>
+        <div class="sb"><div class="v" id="feBest">0</div><div class="l">Best Streak</div></div>
+        <div class="sb"><div class="v" id="feAcc">0/7</div><div class="l">First Try</div></div>
+      </div>
+      <div id="feBtns"></div>
+    </div>
+  </section>
+
+  <!-- CASE SOLVED -->
+  <section id="v-casewin" class="view">
+    <div class="panel">
+      <div class="seal">🏅</div>
+      <div class="eyebrow">Case Closed</div>
+      <h2 id="cwHead">Case Solved!</h2>
+      <span class="rank">Master Detective</span>
+      <div class="bigstars">★★★</div>
+      <p style="font-weight:800; color:var(--ink-soft);" id="cwLine">You cleared every floor!</p>
+      <div class="rewardpop" id="cwReward">⭐ You earned 45 points!</div>
+      <div class="scoreboard">
+        <div class="sb"><div class="v" id="cwScore">0</div><div class="l">Test Points</div></div>
+        <div class="sb"><div class="v" id="cwGames">0</div><div class="l">Cases Solved</div></div>
+        <div class="sb"><div class="v" id="cwBank">0</div><div class="l">Total Points</div></div>
+      </div>
+      <div class="daychip" id="cwDay" style="margin:0 0 12px;">🗓️ 1 mansion left today</div>
+      <button class="btn" onclick="App.openRewards()">See My Rewards 🎁</button>
+      <div style="height:10px"></div>
+      <button class="btn ghost" onclick="App.go('v-menu')">Back to menu</button>
+    </div>
+  </section>
+
+  <!-- DAILY LIMIT -->
+  <section id="v-limit" class="view">
+    <button class="backbtn" onclick="App.go('v-menu')">‹ Back to menu</button>
+    <div class="lockcard">
+      <div class="big">🌙</div>
+      <h2>That's 2 mansions today!</h2>
+      <p>Great detective work today, Koel! Come back tomorrow for more cases.<br>You can still visit the gift shop. 🎁</p>
+      <div style="height:8px"></div>
+      <button class="btn ghost" onclick="App.openRewards()">Go to My Rewards</button>
+      <div style="height:16px"></div>
+      <p style="font-size:.82rem;">Papa can unlock one more:</p>
+      <div class="pinrow"><input id="pinInput" class="pinin" inputmode="numeric" maxlength="4" placeholder="PIN"></div>
+      <button class="tinylink" onclick="App.tryPin()">Unlock with Papa's PIN</button>
+    </div>
+  </section>
+
+  <!-- REWARDS -->
+  <section id="v-rewards" class="view">
+    <button class="backbtn" onclick="App.go('v-menu')">‹ Back to menu</button>
+    <div class="topbar"><div class="brand">🎁 My Rewards</div></div>
+    <div class="delhibanner">🎁 <b>Papa will give your reward when he comes to Delhi!</b> Keep earning points and pick your gifts. 💛</div>
+    <div class="piggy">
+      <div class="eyebrow" style="color:var(--math-deep);">Points Bank</div>
+      <div class="amt" id="pbAmt">0</div>
+      <div class="cap">points to spend</div>
+    </div>
+    <div class="statgrid">
+      <div class="statbox"><div class="v" id="rGames">0</div><div class="l">Cases Solved</div></div>
+      <div class="statbox"><div class="v" id="rSpend">0</div><div class="l">Points Spent</div></div>
+    </div>
+    <div class="eyebrow" style="margin:4px 2px 8px; font-size:.8rem;">🎁 Gift Shop — spend your points</div>
+    <div class="shopgrid" id="shop"></div>
+    <div class="basket">
+      <h3>🛍️ Gifts you've picked</h3>
+      <div id="basketList"><p class="empty">No gifts yet — solve cases to earn points, then treat yourself!</p></div>
+    </div>
+    <p class="note">Ask Papa to deliver your gift! · <button class="tinylink" onclick="App.openPapa()">👨‍💼 Papa's panel</button></p>
+  </section>
+
+  <!-- PAPA PANEL (PIN-gated: log + backup) -->
+  <section id="v-papa" class="view">
+    <button class="backbtn" onclick="App.go('v-rewards')">‹ Back to rewards</button>
+    <div class="topbar"><div class="brand">👨‍💼 Papa's Panel</div></div>
+
+    <div id="papaLock">
+      <div class="lockcard">
+        <div class="big">🔒</div>
+        <h2>For Papa</h2>
+        <p>Enter the PIN to see Koel's activity log and back up her points.</p>
+        <div class="pinrow"><input id="papaPin" class="pinin" inputmode="numeric" maxlength="4" placeholder="PIN"></div>
+        <button class="btn" onclick="App.unlockPapa()">Unlock</button>
+      </div>
+    </div>
+
+    <div id="papaContent" style="display:none;">
+      <div class="statgrid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="statbox"><div class="v" id="ppPoints">0</div><div class="l">Points Now</div></div>
+        <div class="statbox"><div class="v" id="ppGames">0</div><div class="l">Cases Solved</div></div>
+        <div class="statbox"><div class="v" id="ppToday">0</div><div class="l">Done Today</div></div>
+      </div>
+
+      <div class="basket">
+        <h3>🧾 Activity log <span style="font-weight:700; color:var(--ink-soft); font-size:.8rem;">(most recent first)</span></h3>
+        <div id="papaLog"><p class="empty">No mansions solved yet.</p></div>
+      </div>
+
+      <div class="eyebrow" style="margin:14px 2px 8px; font-size:.8rem;">💾 Backup &amp; restore</div>
+      <div class="backuprow">
+        <button class="btn ghost" onclick="App.exportData()">⬇️ Save backup</button>
+        <div style="height:10px"></div>
+        <button class="btn ghost" onclick="document.getElementById('importFile').click()">⬆️ Restore from backup</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none" onchange="App.importData(event)">
+      </div>
+      <p class="note">Backup saves a small file with Koel's points, gifts, stars and log. Keep it safe — restore it if you switch devices or clear the browser. <br><button class="tinylink" onclick="App.resetAll()">Reset everything</button></p>
+    </div>
+  </section>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const MATH_TESTS=[{"name": "The Vanishing Trophy", "blurb": "A golden trophy disappeared from the mansion!", "floors": [[{"skill": "Subtraction", "type": "type", "q": "58 \u2212 18 =", "a": "40", "alt": ["40"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Subtraction", "type": "type", "q": "44 \u2212 11 =", "a": "33", "alt": ["33"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "type", "q": "9 \u00f7 3 =", "a": "3", "hint": "3 \u00d7 ? = 9"}, {"skill": "Fractions", "type": "type", "q": "3/6 \u2212 1/6 =", "a": "1/3", "alt": ["2/6"], "hint": "Same bottom number: subtract the tops."}, {"skill": "Logic", "type": "mc", "q": "5, 10, 15, 20, __ \u2014 next?", "a": "25", "opts": ["25", "30", "22", "24"], "hint": "Count up by 5."}, {"skill": "Fractions", "type": "type", "q": "6/8 + 2/8 =", "a": "1", "alt": ["8/8"], "hint": "Same bottom number: just add the tops."}, {"skill": "Division", "type": "type", "q": "16 \u00f7 8 =", "a": "2", "hint": "8 \u00d7 ? = 16"}], [{"skill": "Division", "type": "type", "q": "84 \u00f7 7 =", "a": "12", "hint": "Think 7 \u00d7 10, then add more."}, {"skill": "Fractions", "type": "mc", "q": "Which is bigger: 2/3 or 1/2?", "a": "2/3", "opts": ["cannot tell", "1/2", "2/3", "they are equal"], "hint": "Think of equal-size pizzas."}, {"skill": "Subtraction", "type": "type", "q": "470 \u2212 122 =", "a": "348", "alt": ["348"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Logic", "type": "mc", "q": "3, 6, 9, 12, __ \u2014 next?", "a": "15", "opts": ["15", "14", "18", "16"], "hint": "Count up by 3."}, {"skill": "Division", "type": "mc", "q": "41 \u00f7 6 =", "a": "6 r5", "opts": ["5 r2", "5 r1", "7 r5", "6 r5"], "hint": "6 \u00d7 6 = 36, then count what's left."}, {"skill": "Fractions", "type": "type", "q": "2/8 + 5/8 =", "a": "7/8", "alt": ["7/8"], "hint": "Add the tops, keep the bottom."}, {"skill": "Subtraction", "type": "type", "q": "552 \u2212 409 =", "a": "143", "alt": ["143"], "hint": "Subtract column by column, borrow when needed."}], [{"skill": "Division", "type": "type", "q": "615 \u00f7 5 =", "a": "123", "hint": "Break the number into easy parts."}, {"skill": "Fractions", "type": "type", "q": "8/12 + 3/12 =", "a": "11/12", "alt": ["11/12"], "hint": "Add the tops; simplify if you can."}, {"skill": "Logic", "type": "mc", "q": "If 4 boxes hold 20 toys equally, each box has\u2026", "a": "5", "opts": ["5", "4", "6", "10"], "hint": "20 \u00f7 4."}, {"skill": "Fractions", "type": "type", "q": "3/8 + 5/8 =", "a": "1", "alt": ["8/8"], "hint": "Add the tops; simplify if you can."}, {"skill": "Subtraction", "type": "type", "q": "4,193 \u2212 1,271 =", "a": "2,922", "alt": ["2922"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Subtraction", "type": "type", "q": "7,881 \u2212 3,577 =", "a": "4,304", "alt": ["4304"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "type", "q": "630 \u00f7 7 =", "a": "90", "hint": "Break the number into easy parts."}]]}, {"name": "The Midnight Thief", "blurb": "Footprints lead up the creaky stairs\u2026", "floors": [[{"skill": "Logic", "type": "mc", "q": "If 4 boxes hold 20 toys equally, each box has\u2026", "a": "5", "opts": ["5", "4", "6", "10"], "hint": "20 \u00f7 4."}, {"skill": "Subtraction", "type": "type", "q": "62 \u2212 45 =", "a": "17", "alt": ["17"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "type", "q": "32 \u00f7 8 =", "a": "4", "hint": "8 \u00d7 ? = 32"}, {"skill": "Subtraction", "type": "type", "q": "89 \u2212 77 =", "a": "12", "alt": ["12"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Fractions", "type": "type", "q": "3/5 \u2212 1/5 =", "a": "2/5", "alt": ["2/5"], "hint": "Same bottom number: subtract the tops."}, {"skill": "Fractions", "type": "type", "q": "2/3 \u2212 1/3 =", "a": "1/3", "alt": ["1/3"], "hint": "Same bottom number: subtract the tops."}, {"skill": "Division", "type": "type", "q": "42 \u00f7 6 =", "a": "7", "hint": "6 \u00d7 ? = 42"}], [{"skill": "Subtraction", "type": "type", "q": "514 \u2212 222 =", "a": "292", "alt": ["292"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "type", "q": "57 \u00f7 3 =", "a": "19", "hint": "Think 3 \u00d7 10, then add more."}, {"skill": "Division", "type": "mc", "q": "66 \u00f7 9 =", "a": "7 r3", "opts": ["9 r3", "7 r3", "9 r8", "8 r7"], "hint": "9 \u00d7 7 = 63, then count what's left."}, {"skill": "Fractions", "type": "mc", "q": "Which is bigger: 1/2 or 1/1?", "a": "1/1", "opts": ["1/2", "1/1", "they are equal", "cannot tell"], "hint": "Think of equal-size pizzas."}, {"skill": "Subtraction", "type": "type", "q": "780 \u2212 180 =", "a": "600", "alt": ["600"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Fractions", "type": "type", "q": "2/6 + 3/6 =", "a": "5/6", "alt": ["5/6"], "hint": "Add the tops, keep the bottom."}, {"skill": "Logic", "type": "mc", "q": "2, 4, 6, 8, __ \u2014 next?", "a": "10", "opts": ["10", "9", "12", "7"], "hint": "Count up by 2."}], [{"skill": "Fractions", "type": "type", "q": "3/6 + 3/6 =", "a": "1", "alt": ["6/6"], "hint": "Add the tops; simplify if you can."}, {"skill": "Division", "type": "mc", "q": "322 \u00f7 4 =", "a": "80 r2", "opts": ["80 r2", "79 r1", "81 r2", "79 r3"], "hint": "4 \u00d7 80 = 320, then count what's left."}, {"skill": "Logic", "type": "mc", "q": "5, 10, 15, 20, __ \u2014 next?", "a": "25", "opts": ["25", "30", "22", "24"], "hint": "Count up by 5."}, {"skill": "Division", "type": "type", "q": "800 \u00f7 8 =", "a": "100", "hint": "Break the number into easy parts."}, {"skill": "Subtraction", "type": "type", "q": "4,281 \u2212 3,740 =", "a": "541", "alt": ["541"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Fractions", "type": "type", "q": "4/6 + 1/6 =", "a": "5/6", "alt": ["5/6"], "hint": "Add the tops; simplify if you can."}, {"skill": "Subtraction", "type": "type", "q": "6,417 \u2212 2,083 =", "a": "4,334", "alt": ["4334"], "hint": "Subtract column by column, borrow when needed."}]]}, {"name": "The Locked Vault", "blurb": "A secret vault won't open without the right numbers.", "floors": [[{"skill": "Subtraction", "type": "type", "q": "39 \u2212 24 =", "a": "15", "alt": ["15"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "type", "q": "15 \u00f7 3 =", "a": "5", "hint": "3 \u00d7 ? = 15"}, {"skill": "Division", "type": "type", "q": "32 \u00f7 4 =", "a": "8", "hint": "4 \u00d7 ? = 32"}, {"skill": "Fractions", "type": "type", "q": "1/2 \u2212 1/2 =", "a": "0", "alt": ["0/2"], "hint": "Same bottom number: subtract the tops."}, {"skill": "Logic", "type": "mc", "q": "3, 6, 9, 12, __ \u2014 next?", "a": "15", "opts": ["15", "14", "18", "16"], "hint": "Count up by 3."}, {"skill": "Subtraction", "type": "type", "q": "42 \u2212 13 =", "a": "29", "alt": ["29"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Fractions", "type": "type", "q": "2/3 + 1/3 =", "a": "1", "alt": ["3/3"], "hint": "Same bottom number: just add the tops."}], [{"skill": "Fractions", "type": "mc", "q": "Which is bigger: 1/2 or 3/4?", "a": "3/4", "opts": ["cannot tell", "1/2", "3/4", "they are equal"], "hint": "Think of equal-size pizzas."}, {"skill": "Subtraction", "type": "type", "q": "688 \u2212 614 =", "a": "74", "alt": ["74"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "type", "q": "91 \u00f7 7 =", "a": "13", "hint": "Think 7 \u00d7 10, then add more."}, {"skill": "Logic", "type": "mc", "q": "Double of 12 is\u2026", "a": "24", "opts": ["24", "22", "14", "26"], "hint": "12 + 12."}, {"skill": "Fractions", "type": "mc", "q": "Which is bigger: 1/1 or 2/3?", "a": "1/1", "opts": ["1/1", "cannot tell", "they are equal", "2/3"], "hint": "Think of equal-size pizzas."}, {"skill": "Subtraction", "type": "type", "q": "521 \u2212 129 =", "a": "392", "alt": ["392"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "mc", "q": "37 \u00f7 3 =", "a": "12 r1", "opts": ["11 r1", "12 r1", "13 r1", "14 r1"], "hint": "3 \u00d7 12 = 36, then count what's left."}], [{"skill": "Logic", "type": "mc", "q": "Half of 18 is\u2026", "a": "9", "opts": ["9", "8", "6", "12"], "hint": "Split 18 into two equal parts."}, {"skill": "Fractions", "type": "type", "q": "4/8 + 2/8 =", "a": "3/4", "alt": ["6/8"], "hint": "Add the tops; simplify if you can."}, {"skill": "Subtraction", "type": "type", "q": "5,027 \u2212 2,167 =", "a": "2,860", "alt": ["2860"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "mc", "q": "784 \u00f7 9 =", "a": "87 r1", "opts": ["89 r2", "87 r1", "86 r5", "89 r5"], "hint": "9 \u00d7 87 = 783, then count what's left."}, {"skill": "Subtraction", "type": "type", "q": "3,292 \u2212 2,794 =", "a": "498", "alt": ["498"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Fractions", "type": "type", "q": "6/9 + 2/9 =", "a": "8/9", "alt": ["8/9"], "hint": "Add the tops; simplify if you can."}, {"skill": "Division", "type": "type", "q": "1040 \u00f7 8 =", "a": "130", "hint": "Break the number into easy parts."}]]}, {"name": "The Haunted Clock", "blurb": "The clock tower stopped at a mysterious hour.", "floors": [[{"skill": "Subtraction", "type": "type", "q": "63 \u2212 20 =", "a": "43", "alt": ["43"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "type", "q": "12 \u00f7 3 =", "a": "4", "hint": "3 \u00d7 ? = 12"}, {"skill": "Fractions", "type": "type", "q": "5/6 + 1/6 =", "a": "1", "alt": ["6/6"], "hint": "Same bottom number: just add the tops."}, {"skill": "Logic", "type": "mc", "q": "3, 6, 9, 12, __ \u2014 next?", "a": "15", "opts": ["15", "14", "18", "16"], "hint": "Count up by 3."}, {"skill": "Subtraction", "type": "type", "q": "84 \u2212 81 =", "a": "3", "alt": ["3"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "type", "q": "6 \u00f7 2 =", "a": "3", "hint": "2 \u00d7 ? = 6"}, {"skill": "Fractions", "type": "type", "q": "1/2 \u2212 1/2 =", "a": "0", "alt": ["0/2"], "hint": "Same bottom number: subtract the tops."}], [{"skill": "Subtraction", "type": "type", "q": "885 \u2212 354 =", "a": "531", "alt": ["531"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Fractions", "type": "type", "q": "4/10 + 6/10 =", "a": "1", "alt": ["10/10"], "hint": "Add the tops, keep the bottom."}, {"skill": "Fractions", "type": "mc", "q": "Which is bigger: 1/1 or 1/2?", "a": "1/1", "opts": ["cannot tell", "1/2", "1/1", "they are equal"], "hint": "Think of equal-size pizzas."}, {"skill": "Logic", "type": "mc", "q": "If 4 boxes hold 20 toys equally, each box has\u2026", "a": "5", "opts": ["5", "4", "6", "10"], "hint": "20 \u00f7 4."}, {"skill": "Division", "type": "type", "q": "96 \u00f7 8 =", "a": "12", "hint": "Think 8 \u00d7 10, then add more."}, {"skill": "Subtraction", "type": "type", "q": "383 \u2212 288 =", "a": "95", "alt": ["95"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "type", "q": "65 \u00f7 5 =", "a": "13", "hint": "Think 5 \u00d7 10, then add more."}], [{"skill": "Division", "type": "type", "q": "1206 \u00f7 9 =", "a": "134", "hint": "Break the number into easy parts."}, {"skill": "Division", "type": "mc", "q": "376 \u00f7 5 =", "a": "75 r1", "opts": ["77 r3", "77 r1", "75 r1", "77 r4"], "hint": "5 \u00d7 75 = 375, then count what's left."}, {"skill": "Fractions", "type": "type", "q": "7/10 + 2/10 =", "a": "9/10", "alt": ["9/10"], "hint": "Add the tops; simplify if you can."}, {"skill": "Subtraction", "type": "type", "q": "7,626 \u2212 6,893 =", "a": "733", "alt": ["733"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Subtraction", "type": "type", "q": "8,606 \u2212 5,410 =", "a": "3,196", "alt": ["3196"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Fractions", "type": "type", "q": "4/12 + 4/12 =", "a": "2/3", "alt": ["8/12"], "hint": "Add the tops; simplify if you can."}, {"skill": "Logic", "type": "mc", "q": "A pizza has 8 slices. You eat 3. How many are left?", "a": "5", "opts": ["5", "4", "6", "3"], "hint": "8 \u2212 3."}]]}, {"name": "The Missing Treasure", "blurb": "X marks the spot \u2014 but where is X?", "floors": [[{"skill": "Subtraction", "type": "type", "q": "86 \u2212 37 =", "a": "49", "alt": ["49"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "type", "q": "15 \u00f7 3 =", "a": "5", "hint": "3 \u00d7 ? = 15"}, {"skill": "Subtraction", "type": "type", "q": "51 \u2212 15 =", "a": "36", "alt": ["36"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Fractions", "type": "type", "q": "5/8 \u2212 1/8 =", "a": "1/2", "alt": ["4/8"], "hint": "Same bottom number: subtract the tops."}, {"skill": "Fractions", "type": "type", "q": "1/3 + 1/3 =", "a": "2/3", "alt": ["2/3"], "hint": "Same bottom number: just add the tops."}, {"skill": "Logic", "type": "mc", "q": "A pizza has 8 slices. You eat 3. How many are left?", "a": "5", "opts": ["5", "4", "6", "3"], "hint": "8 \u2212 3."}, {"skill": "Division", "type": "type", "q": "30 \u00f7 6 =", "a": "5", "hint": "6 \u00d7 ? = 30"}], [{"skill": "Division", "type": "type", "q": "78 \u00f7 6 =", "a": "13", "hint": "Think 6 \u00d7 10, then add more."}, {"skill": "Subtraction", "type": "type", "q": "251 \u2212 171 =", "a": "80", "alt": ["80"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Subtraction", "type": "type", "q": "380 \u2212 305 =", "a": "75", "alt": ["75"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Fractions", "type": "type", "q": "3/6 + 3/6 =", "a": "1", "alt": ["6/6"], "hint": "Add the tops, keep the bottom."}, {"skill": "Division", "type": "mc", "q": "87 \u00f7 9 =", "a": "9 r6", "opts": ["8 r8", "9 r6", "10 r7", "11 r8"], "hint": "9 \u00d7 9 = 81, then count what's left."}, {"skill": "Fractions", "type": "type", "q": "4/8 + 1/8 =", "a": "5/8", "alt": ["5/8"], "hint": "Add the tops, keep the bottom."}, {"skill": "Logic", "type": "mc", "q": "5, 10, 15, 20, __ \u2014 next?", "a": "25", "opts": ["25", "30", "22", "24"], "hint": "Count up by 5."}], [{"skill": "Subtraction", "type": "type", "q": "3,694 \u2212 2,720 =", "a": "974", "alt": ["974"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Logic", "type": "mc", "q": "If 4 boxes hold 20 toys equally, each box has\u2026", "a": "5", "opts": ["5", "4", "6", "10"], "hint": "20 \u00f7 4."}, {"skill": "Fractions", "type": "type", "q": "7/10 + 1/10 =", "a": "4/5", "alt": ["8/10"], "hint": "Add the tops; simplify if you can."}, {"skill": "Fractions", "type": "type", "q": "5/9 + 4/9 =", "a": "1", "alt": ["9/9"], "hint": "Add the tops; simplify if you can."}, {"skill": "Division", "type": "type", "q": "704 \u00f7 8 =", "a": "88", "hint": "Break the number into easy parts."}, {"skill": "Subtraction", "type": "type", "q": "5,190 \u2212 4,706 =", "a": "484", "alt": ["484"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "mc", "q": "123 \u00f7 6 =", "a": "20 r3", "opts": ["21 r5", "22 r5", "21 r4", "20 r3"], "hint": "6 \u00d7 20 = 120, then count what's left."}]]}, {"name": "The Secret Recipe", "blurb": "Granny's number-coded recipe went missing.", "floors": [[{"skill": "Division", "type": "type", "q": "63 \u00f7 9 =", "a": "7", "hint": "9 \u00d7 ? = 63"}, {"skill": "Division", "type": "type", "q": "56 \u00f7 7 =", "a": "8", "hint": "7 \u00d7 ? = 56"}, {"skill": "Subtraction", "type": "type", "q": "53 \u2212 13 =", "a": "40", "alt": ["40"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Fractions", "type": "type", "q": "1/5 \u2212 1/5 =", "a": "0", "alt": ["0/5"], "hint": "Same bottom number: subtract the tops."}, {"skill": "Logic", "type": "mc", "q": "3, 6, 9, 12, __ \u2014 next?", "a": "15", "opts": ["15", "14", "18", "16"], "hint": "Count up by 3."}, {"skill": "Subtraction", "type": "type", "q": "63 \u2212 34 =", "a": "29", "alt": ["29"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Fractions", "type": "type", "q": "2/4 \u2212 2/4 =", "a": "0", "alt": ["0/4"], "hint": "Same bottom number: subtract the tops."}], [{"skill": "Division", "type": "type", "q": "84 \u00f7 7 =", "a": "12", "hint": "Think 7 \u00d7 10, then add more."}, {"skill": "Subtraction", "type": "type", "q": "684 \u2212 217 =", "a": "467", "alt": ["467"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "type", "q": "65 \u00f7 5 =", "a": "13", "hint": "Think 5 \u00d7 10, then add more."}, {"skill": "Logic", "type": "mc", "q": "If 4 boxes hold 20 toys equally, each box has\u2026", "a": "5", "opts": ["5", "4", "6", "10"], "hint": "20 \u00f7 4."}, {"skill": "Fractions", "type": "type", "q": "2/8 + 4/8 =", "a": "3/4", "alt": ["6/8"], "hint": "Add the tops, keep the bottom."}, {"skill": "Fractions", "type": "type", "q": "2/6 + 3/6 =", "a": "5/6", "alt": ["5/6"], "hint": "Add the tops, keep the bottom."}, {"skill": "Subtraction", "type": "type", "q": "676 \u2212 362 =", "a": "314", "alt": ["314"], "hint": "Subtract column by column, borrow when needed."}], [{"skill": "Division", "type": "type", "q": "693 \u00f7 7 =", "a": "99", "hint": "Break the number into easy parts."}, {"skill": "Logic", "type": "mc", "q": "Half of 18 is\u2026", "a": "9", "opts": ["9", "8", "6", "12"], "hint": "Split 18 into two equal parts."}, {"skill": "Subtraction", "type": "type", "q": "7,045 \u2212 5,408 =", "a": "1,637", "alt": ["1637"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Fractions", "type": "type", "q": "8/10 + 2/10 =", "a": "1", "alt": ["10/10"], "hint": "Add the tops; simplify if you can."}, {"skill": "Division", "type": "mc", "q": "381 \u00f7 7 =", "a": "54 r3", "opts": ["53 r4", "53 r1", "55 r4", "54 r3"], "hint": "7 \u00d7 54 = 378, then count what's left."}, {"skill": "Subtraction", "type": "type", "q": "7,328 \u2212 3,212 =", "a": "4,116", "alt": ["4116"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Fractions", "type": "type", "q": "5/8 + 1/8 =", "a": "3/4", "alt": ["6/8"], "hint": "Add the tops; simplify if you can."}]]}, {"name": "The Final Mystery", "blurb": "The toughest case in the whole mansion!", "floors": [[{"skill": "Fractions", "type": "type", "q": "2/4 + 2/4 =", "a": "1", "alt": ["4/4"], "hint": "Same bottom number: just add the tops."}, {"skill": "Fractions", "type": "type", "q": "3/8 \u2212 2/8 =", "a": "1/8", "alt": ["1/8"], "hint": "Same bottom number: subtract the tops."}, {"skill": "Logic", "type": "mc", "q": "A pizza has 8 slices. You eat 3. How many are left?", "a": "5", "opts": ["5", "4", "6", "3"], "hint": "8 \u2212 3."}, {"skill": "Division", "type": "type", "q": "18 \u00f7 9 =", "a": "2", "hint": "9 \u00d7 ? = 18"}, {"skill": "Subtraction", "type": "type", "q": "90 \u2212 72 =", "a": "18", "alt": ["18"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Subtraction", "type": "type", "q": "92 \u2212 81 =", "a": "11", "alt": ["11"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Division", "type": "type", "q": "40 \u00f7 5 =", "a": "8", "hint": "5 \u00d7 ? = 40"}], [{"skill": "Fractions", "type": "type", "q": "4/10 + 2/10 =", "a": "3/5", "alt": ["6/10"], "hint": "Add the tops, keep the bottom."}, {"skill": "Logic", "type": "mc", "q": "Double of 12 is\u2026", "a": "24", "opts": ["24", "22", "14", "26"], "hint": "12 + 12."}, {"skill": "Division", "type": "mc", "q": "38 \u00f7 5 =", "a": "7 r3", "opts": ["6 r3", "8 r1", "6 r2", "7 r3"], "hint": "5 \u00d7 7 = 35, then count what's left."}, {"skill": "Division", "type": "type", "q": "105 \u00f7 7 =", "a": "15", "hint": "Think 7 \u00d7 10, then add more."}, {"skill": "Fractions", "type": "mc", "q": "Which is bigger: 1/4 or 1/1?", "a": "1/1", "opts": ["cannot tell", "1/1", "they are equal", "1/4"], "hint": "Think of equal-size pizzas."}, {"skill": "Subtraction", "type": "type", "q": "803 \u2212 637 =", "a": "166", "alt": ["166"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Subtraction", "type": "type", "q": "695 \u2212 383 =", "a": "312", "alt": ["312"], "hint": "Subtract column by column, borrow when needed."}], [{"skill": "Division", "type": "mc", "q": "459 \u00f7 6 =", "a": "76 r3", "opts": ["77 r5", "78 r1", "76 r3", "78 r4"], "hint": "6 \u00d7 76 = 456, then count what's left."}, {"skill": "Logic", "type": "mc", "q": "2, 4, 6, 8, __ \u2014 next?", "a": "10", "opts": ["10", "9", "12", "7"], "hint": "Count up by 2."}, {"skill": "Fractions", "type": "type", "q": "3/12 + 3/12 =", "a": "1/2", "alt": ["6/12"], "hint": "Add the tops; simplify if you can."}, {"skill": "Division", "type": "type", "q": "704 \u00f7 8 =", "a": "88", "hint": "Break the number into easy parts."}, {"skill": "Fractions", "type": "type", "q": "3/8 + 2/8 =", "a": "5/8", "alt": ["5/8"], "hint": "Add the tops; simplify if you can."}, {"skill": "Subtraction", "type": "type", "q": "6,571 \u2212 4,409 =", "a": "2,162", "alt": ["2162"], "hint": "Subtract column by column, borrow when needed."}, {"skill": "Subtraction", "type": "type", "q": "6,966 \u2212 5,883 =", "a": "1,083", "alt": ["1083"], "hint": "Subtract column by column, borrow when needed."}]]}];
+const ENG_TESTS=[{"name": "The Whispering Library", "blurb": "Books are rearranging themselves at night!", "floors": [[{"skill": "Spelling", "type": "spell", "q": "Type the missing word: We learn new things at ______.", "a": "school", "hint": "It starts with \u201cs\u201d and has 6 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: A tiger is a wild ______.", "a": "animal", "hint": "It starts with \u201ca\u201d and has 6 letters."}, {"skill": "Reading", "type": "mc", "q": "What colour is Rex?", "a": "brown", "opts": ["grey", "white", "brown", "black"], "passage": "Tom has a pet dog named Rex. Rex is brown and loves to run in the park. Every evening, Tom throws a ball and Rex brings it back."}, {"skill": "Reading", "type": "mc", "q": "What does Rex bring back?", "a": "the ball", "opts": ["a bone", "the ball", "a stick", "a shoe"], "passage": "Tom has a pet dog named Rex. Rex is brown and loves to run in the park. Every evening, Tom throws a ball and Rex brings it back."}, {"skill": "Logic", "type": "mc", "q": "If today is Monday, tomorrow is\u2026", "a": "Tuesday", "opts": ["Sunday", "Friday", "Tuesday", "Monday"]}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: We walked ______ the park.", "a": "around", "hint": "It starts with \u201ca\u201d and has 6 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: I was late ______ I missed the bus.", "a": "because", "hint": "It starts with \u201cb\u201d and has 7 letters."}], [{"skill": "Spelling", "type": "spell", "q": "Type the missing word: These two shoes look ______.", "a": "different", "hint": "It starts with \u201cd\u201d and has 9 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: The cake was ______.", "a": "delicious", "hint": "It starts with \u201cd\u201d and has 9 letters."}, {"skill": "Reading", "type": "mc", "q": "Where did Maya find the key?", "a": "inside an old book", "opts": ["in her bag", "inside an old book", "in the garden", "under her bed"], "passage": "Maya found a small key inside an old book. The key opened a wooden box. Inside the box was a letter from her grandmother, written many years ago."}, {"skill": "Logic", "type": "mc", "q": "Ravi is taller than Sam. Sam is taller than Ann. Who is tallest?", "a": "Ravi", "opts": ["Ravi", "Ann", "Cannot tell", "Sam"]}, {"skill": "Reading", "type": "mc", "q": "What did the key open?", "a": "a wooden box", "opts": ["a door", "a wooden box", "a gate", "a car"], "passage": "Maya found a small key inside an old book. The key opened a wooden box. Inside the box was a letter from her grandmother, written many years ago."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: The test is ______ morning.", "a": "tomorrow", "hint": "It starts with \u201ct\u201d and has 8 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: We have ______ chairs for everyone.", "a": "enough", "hint": "It starts with \u201ce\u201d and has 6 letters."}], [{"skill": "Spelling", "type": "spell", "q": "Type the missing word: A carrot is a ______.", "a": "vegetable", "hint": "It starts with \u201cv\u201d and has 9 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: She has lots of ______ in cooking.", "a": "experience", "hint": "It starts with \u201ce\u201d and has 10 letters."}, {"skill": "Reading", "type": "mc", "q": "What is the main idea?", "a": "The desert is full of life", "opts": ["Foxes are scary", "The desert is full of life", "Deserts are empty", "Cacti are tall"], "passage": "The desert may look empty, but it is full of life. Animals like the fennec fox sleep during the hot day and hunt at night when it is cooler. Plants such as the cactus store water in their thick stems to survive long months without rain."}, {"skill": "Logic", "type": "mc", "q": "If all roses are flowers, and this is a rose, then it is a\u2026", "a": "flower", "opts": ["weed", "tree", "flower", "fruit"]}, {"skill": "Reading", "type": "mc", "q": "How does a cactus survive without rain?", "a": "it stores water in its stem", "opts": ["it stores water in its stem", "it drinks dew", "it moves to water", "it grows taller"], "passage": "The desert may look empty, but it is full of life. Animals like the fennec fox sleep during the hot day and hunt at night when it is cooler. Plants such as the cactus store water in their thick stems to survive long months without rain."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Reading gives you ______.", "a": "knowledge", "hint": "It starts with \u201ck\u201d and has 9 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: I love fruit, ______ mangoes.", "a": "especially", "hint": "It starts with \u201ce\u201d and has 10 letters."}]]}, {"name": "The Secret Code", "blurb": "A coded message appeared on the chalkboard.", "floors": [[{"skill": "Spelling", "type": "spell", "q": "Type the missing word: We learn new things at ______.", "a": "school", "hint": "It starts with \u201cs\u201d and has 6 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: The good news made me ______.", "a": "happy", "hint": "It starts with \u201ch\u201d and has 5 letters."}, {"skill": "Reading", "type": "mc", "q": "What did she give it every day?", "a": "water and sunlight", "opts": ["sand", "milk", "music", "water and sunlight"], "passage": "Mia planted a small seed in a pot. She gave it water and sunlight every day. After two weeks, a tiny green plant appeared."}, {"skill": "Logic", "type": "mc", "q": "2, 4, 6, __ \u2014 next?", "a": "8", "opts": ["10", "8", "9", "7"]}, {"skill": "Reading", "type": "mc", "q": "What appeared after two weeks?", "a": "a tiny green plant", "opts": ["a tiny green plant", "a bird", "a fruit", "a stone"], "passage": "Mia planted a small seed in a pot. She gave it water and sunlight every day. After two weeks, a tiny green plant appeared."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Let's play that game ______.", "a": "again", "hint": "It starts with \u201ca\u201d and has 5 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: The cat hid ______ the bed.", "a": "under", "hint": "It starts with \u201cu\u201d and has 5 letters."}], [{"skill": "Spelling", "type": "spell", "q": "Type the missing word: We worked ______ on the project.", "a": "together", "hint": "It starts with \u201ct\u201d and has 8 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: She knew the right ______.", "a": "answer", "hint": "It starts with \u201ca\u201d and has 6 letters."}, {"skill": "Reading", "type": "mc", "q": "When was the science fair?", "a": "Friday", "opts": ["Sunday", "Monday", "Tuesday", "Friday"], "passage": "The school held a science fair on Friday. Ravi built a small volcano that bubbled with red foam. Everyone clapped when it erupted."}, {"skill": "Reading", "type": "mc", "q": "What colour was the foam?", "a": "red", "opts": ["red", "green", "yellow", "blue"], "passage": "The school held a science fair on Friday. Ravi built a small volcano that bubbled with red foam. Everyone clapped when it erupted."}, {"skill": "Logic", "type": "mc", "q": "Pencil is to write as scissors is to\u2026", "a": "cut", "opts": ["cut", "draw", "paint", "glue"]}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: India is a large ______.", "a": "country", "hint": "It starts with \u201cc\u201d and has 7 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: I borrowed a book from the ______.", "a": "library", "hint": "It starts with \u201cl\u201d and has 7 letters."}], [{"skill": "Spelling", "type": "spell", "q": "Type the missing word: Water is ______ for life.", "a": "necessary", "hint": "It starts with \u201cn\u201d and has 9 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Please pay ______ in class.", "a": "attention", "hint": "It starts with \u201ca\u201d and has 9 letters."}, {"skill": "Logic", "type": "mc", "q": "Doctor is to hospital as teacher is to\u2026", "a": "school", "opts": ["office", "farm", "school", "shop"]}, {"skill": "Reading", "type": "mc", "q": "Why was the North Star useful?", "a": "it helped sailors not get lost", "opts": ["it was warm", "it moved fast", "it helped sailors not get lost", "it was colourful"], "passage": "Long ago, people used the stars to find their way at night. Sailors looked for a bright star called the North Star, which always points north. With it, they could sail across the sea without getting lost."}, {"skill": "Reading", "type": "mc", "q": "Which direction does the North Star point?", "a": "north", "opts": ["north", "south", "east", "west"], "passage": "Long ago, people used the stars to find their way at night. Sailors looked for a bright star called the North Star, which always points north. With it, they could sail across the sea without getting lost."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: That was a ______ puzzle.", "a": "difficult", "hint": "It starts with \u201cd\u201d and has 9 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Magicians make things ______.", "a": "disappear", "hint": "It starts with \u201cd\u201d and has 9 letters."}]]}, {"name": "The Missing Mascot", "blurb": "The school mascot vanished before the big game.", "floors": [[{"skill": "Spelling", "type": "spell", "q": "Type the missing word: Flowers grow in our ______.", "a": "garden", "hint": "It starts with \u201cg\u201d and has 6 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Wash your hands ______ you eat.", "a": "before", "hint": "It starts with \u201cb\u201d and has 6 letters."}, {"skill": "Reading", "type": "mc", "q": "What colour were the shells?", "a": "pink", "opts": ["blue", "pink", "white", "green"], "passage": "On Saturday, Sam went to the beach with his family. He built a big sandcastle and collected pink shells."}, {"skill": "Logic", "type": "mc", "q": "If today is Monday, tomorrow is\u2026", "a": "Tuesday", "opts": ["Tuesday", "Sunday", "Monday", "Friday"]}, {"skill": "Reading", "type": "mc", "q": "What did Sam build?", "a": "a sandcastle", "opts": ["a house", "a sandcastle", "a tower", "a boat"], "passage": "On Saturday, Sam went to the beach with his family. He built a big sandcastle and collected pink shells."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: We had dinner with the whole ______.", "a": "family", "hint": "It starts with \u201cf\u201d and has 6 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: She wore a ______ blue dress.", "a": "pretty", "hint": "It starts with \u201cp\u201d and has 6 letters."}], [{"skill": "Spelling", "type": "spell", "q": "Type the missing word: India is a large ______.", "a": "country", "hint": "It starts with \u201cc\u201d and has 7 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: We baked a cake for her ______.", "a": "birthday", "hint": "It starts with \u201cb\u201d and has 8 letters."}, {"skill": "Logic", "type": "mc", "q": "All cats have whiskers. Tom is a cat. So Tom has\u2026", "a": "whiskers", "opts": ["fins", "feathers", "scales", "whiskers"]}, {"skill": "Reading", "type": "mc", "q": "What helps ducks push through water?", "a": "their paddle-shaped feet", "opts": ["their wings", "their tails", "their paddle-shaped feet", "their beaks"], "passage": "Ducks are good swimmers. Their feet are shaped like paddles, which help them push through the water. Their feathers keep them warm and dry."}, {"skill": "Reading", "type": "mc", "q": "What keeps ducks warm and dry?", "a": "their feathers", "opts": ["the mud", "their feathers", "their feet", "the sun"], "passage": "Ducks are good swimmers. Their feet are shaped like paddles, which help them push through the water. Their feathers keep them warm and dry."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: I eat ______ before school.", "a": "breakfast", "hint": "It starts with \u201cb\u201d and has 9 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: I ______ about the puzzle all day.", "a": "thought", "hint": "It starts with \u201ct\u201d and has 7 letters."}], [{"skill": "Spelling", "type": "spell", "q": "Type the missing word: Reading gives you ______.", "a": "knowledge", "hint": "It starts with \u201ck\u201d and has 9 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: We bought new ______ for the house.", "a": "furniture", "hint": "It starts with \u201cf\u201d and has 9 letters."}, {"skill": "Reading", "type": "mc", "q": "What do bees carry between flowers?", "a": "pollen", "opts": ["sand", "pollen", "petals", "honey"], "passage": "Bees are tiny but very important. As they fly from flower to flower to collect nectar, they carry pollen with them. This pollen helps plants make seeds and grow new fruit."}, {"skill": "Reading", "type": "mc", "q": "What do bees collect from flowers?", "a": "nectar", "opts": ["seeds", "nectar", "leaves", "water"], "passage": "Bees are tiny but very important. As they fly from flower to flower to collect nectar, they carry pollen with them. This pollen helps plants make seeds and grow new fruit."}, {"skill": "Logic", "type": "mc", "q": "Tom is older than Ann but younger than Ravi. Who is youngest?", "a": "Ann", "opts": ["Ravi", "Tom", "Cannot tell", "Ann"]}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: The ______ dropped at night.", "a": "temperature", "hint": "It starts with \u201ct\u201d and has 11 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: The hike was a great ______.", "a": "adventure", "hint": "It starts with \u201ca\u201d and has 9 letters."}]]}, {"name": "The Ghost Writer", "blurb": "Someone is leaving spooky notes in the hallway.", "floors": [[{"skill": "Spelling", "type": "spell", "q": "Type the missing word: Fish live in the ______.", "a": "water", "hint": "It starts with \u201cw\u201d and has 5 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Many ______ came to the school fair.", "a": "people", "hint": "It starts with \u201cp\u201d and has 6 letters."}, {"skill": "Logic", "type": "mc", "q": "Three apples cost more than one apple. True or false?", "a": "true", "opts": ["false", "true", "maybe", "none"]}, {"skill": "Reading", "type": "mc", "q": "What is the dog's name?", "a": "Rex", "opts": ["Max", "Tom", "Rex", "Ben"], "passage": "Tom has a pet dog named Rex. Rex is brown and loves to run in the park. Every evening, Tom throws a ball and Rex brings it back."}, {"skill": "Reading", "type": "mc", "q": "What does Rex bring back?", "a": "the ball", "opts": ["the ball", "a stick", "a bone", "a shoe"], "passage": "Tom has a pet dog named Rex. Rex is brown and loves to run in the park. Every evening, Tom throws a ball and Rex brings it back."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Please sharpen your ______.", "a": "pencil", "hint": "It starts with \u201cp\u201d and has 6 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: A tiger is a wild ______.", "a": "animal", "hint": "It starts with \u201ca\u201d and has 6 letters."}], [{"skill": "Spelling", "type": "spell", "q": "Type the missing word: Sleep is ______ for your health.", "a": "important", "hint": "It starts with \u201ci\u201d and has 9 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: The ______ is sunny today.", "a": "weather", "hint": "It starts with \u201cw\u201d and has 7 letters."}, {"skill": "Reading", "type": "mc", "q": "Where did Maya find the key?", "a": "inside an old book", "opts": ["in her bag", "in the garden", "inside an old book", "under her bed"], "passage": "Maya found a small key inside an old book. The key opened a wooden box. Inside the box was a letter from her grandmother, written many years ago."}, {"skill": "Reading", "type": "mc", "q": "Who wrote the letter?", "a": "her grandmother", "opts": ["her grandmother", "her mother", "her friend", "her teacher"], "passage": "Maya found a small key inside an old book. The key opened a wooden box. Inside the box was a letter from her grandmother, written many years ago."}, {"skill": "Logic", "type": "mc", "q": "Pencil is to write as scissors is to\u2026", "a": "cut", "opts": ["paint", "cut", "glue", "draw"]}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: We baked a cake for her ______.", "a": "birthday", "hint": "It starts with \u201cb\u201d and has 8 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: India is a large ______.", "a": "country", "hint": "It starts with \u201cc\u201d and has 7 letters."}], [{"skill": "Spelling", "type": "spell", "q": "Type the missing word: Magicians make things ______.", "a": "disappear", "hint": "It starts with \u201cd\u201d and has 9 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Water is ______ for life.", "a": "necessary", "hint": "It starts with \u201cn\u201d and has 9 letters."}, {"skill": "Logic", "type": "mc", "q": "Doctor is to hospital as teacher is to\u2026", "a": "school", "opts": ["shop", "school", "office", "farm"]}, {"skill": "Reading", "type": "mc", "q": "When does the fennec fox hunt?", "a": "at night", "opts": ["at night", "at sunrise", "in the morning", "at noon"], "passage": "The desert may look empty, but it is full of life. Animals like the fennec fox sleep during the hot day and hunt at night when it is cooler. Plants such as the cactus store water in their thick stems to survive long months without rain."}, {"skill": "Reading", "type": "mc", "q": "What is the main idea?", "a": "The desert is full of life", "opts": ["Cacti are tall", "Deserts are empty", "The desert is full of life", "Foxes are scary"], "passage": "The desert may look empty, but it is full of life. Animals like the fennec fox sleep during the hot day and hunt at night when it is cooler. Plants such as the cactus store water in their thick stems to survive long months without rain."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: We ate dinner at a ______.", "a": "restaurant", "hint": "It starts with \u201cr\u201d and has 10 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Look up the word in a ______.", "a": "dictionary", "hint": "It starts with \u201cd\u201d and has 10 letters."}]]}, {"name": "The Riddle Room", "blurb": "A locked room full of word riddles.", "floors": [[{"skill": "Spelling", "type": "spell", "q": "Type the missing word: A tiger is a wild ______.", "a": "animal", "hint": "It starts with \u201ca\u201d and has 6 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Flowers grow in our ______.", "a": "garden", "hint": "It starts with \u201cg\u201d and has 6 letters."}, {"skill": "Reading", "type": "mc", "q": "What appeared after two weeks?", "a": "a tiny green plant", "opts": ["a bird", "a stone", "a tiny green plant", "a fruit"], "passage": "Mia planted a small seed in a pot. She gave it water and sunlight every day. After two weeks, a tiny green plant appeared."}, {"skill": "Reading", "type": "mc", "q": "What did Mia plant?", "a": "a seed", "opts": ["a bean", "a flower", "a tree", "a seed"], "passage": "Mia planted a small seed in a pot. She gave it water and sunlight every day. After two weeks, a tiny green plant appeared."}, {"skill": "Logic", "type": "mc", "q": "Cat, dog, fish, chair \u2014 which does NOT belong?", "a": "chair", "opts": ["cat", "chair", "dog", "fish"]}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: We had dinner with the whole ______.", "a": "family", "hint": "It starts with \u201cf\u201d and has 6 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: I ______ love some ice cream.", "a": "would", "hint": "It starts with \u201cw\u201d and has 5 letters."}], [{"skill": "Spelling", "type": "spell", "q": "Type the missing word: India is a large ______.", "a": "country", "hint": "It starts with \u201cc\u201d and has 7 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: I eat ______ before school.", "a": "breakfast", "hint": "It starts with \u201cb\u201d and has 9 letters."}, {"skill": "Reading", "type": "mc", "q": "When was the science fair?", "a": "Friday", "opts": ["Friday", "Tuesday", "Sunday", "Monday"], "passage": "The school held a science fair on Friday. Ravi built a small volcano that bubbled with red foam. Everyone clapped when it erupted."}, {"skill": "Reading", "type": "mc", "q": "What did Ravi build?", "a": "a volcano", "opts": ["a rocket", "a volcano", "a bridge", "a robot"], "passage": "The school held a science fair on Friday. Ravi built a small volcano that bubbled with red foam. Everyone clapped when it erupted."}, {"skill": "Logic", "type": "mc", "q": "Which word is the odd one out? happy, sad, angry, run", "a": "run", "opts": ["happy", "sad", "run", "angry"]}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: The film was very ______.", "a": "exciting", "hint": "It starts with \u201ce\u201d and has 8 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: We baked a cake for her ______.", "a": "birthday", "hint": "It starts with \u201cb\u201d and has 8 letters."}], [{"skill": "Spelling", "type": "spell", "q": "Type the missing word: Stop ______ when you hear the bell.", "a": "immediately", "hint": "It starts with \u201ci\u201d and has 11 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: She has lots of ______ in cooking.", "a": "experience", "hint": "It starts with \u201ce\u201d and has 10 letters."}, {"skill": "Reading", "type": "mc", "q": "What did sailors use to find their way?", "a": "the stars", "opts": ["the moon only", "phones", "maps", "the stars"], "passage": "Long ago, people used the stars to find their way at night. Sailors looked for a bright star called the North Star, which always points north. With it, they could sail across the sea without getting lost."}, {"skill": "Logic", "type": "mc", "q": "Which MUST be true? 'Every bird in the cage is yellow.'", "a": "A bird in the cage is yellow", "opts": ["The cage is yellow", "A bird in the cage is yellow", "All birds are yellow", "Yellow things are birds"]}, {"skill": "Reading", "type": "mc", "q": "Which direction does the North Star point?", "a": "north", "opts": ["west", "north", "east", "south"], "passage": "Long ago, people used the stars to find their way at night. Sailors looked for a bright star called the North Star, which always points north. With it, they could sail across the sea without getting lost."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: I love fruit, ______ mangoes.", "a": "especially", "hint": "It starts with \u201ce\u201d and has 10 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: The hike was a great ______.", "a": "adventure", "hint": "It starts with \u201ca\u201d and has 9 letters."}]]}, {"name": "The Lost Letter", "blurb": "A mysterious letter with missing words.", "floors": [[{"skill": "Spelling", "type": "spell", "q": "Type the missing word: We walked ______ the park.", "a": "around", "hint": "It starts with \u201ca\u201d and has 6 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: My best ______ sits next to me in class.", "a": "friend", "hint": "It starts with \u201cf\u201d and has 6 letters."}, {"skill": "Reading", "type": "mc", "q": "When did Sam go to the beach?", "a": "Saturday", "opts": ["Sunday", "Saturday", "Friday", "Monday"], "passage": "On Saturday, Sam went to the beach with his family. He built a big sandcastle and collected pink shells."}, {"skill": "Reading", "type": "mc", "q": "What did Sam build?", "a": "a sandcastle", "opts": ["a boat", "a tower", "a house", "a sandcastle"], "passage": "On Saturday, Sam went to the beach with his family. He built a big sandcastle and collected pink shells."}, {"skill": "Logic", "type": "mc", "q": "Cat, dog, fish, chair \u2014 which does NOT belong?", "a": "chair", "opts": ["fish", "cat", "chair", "dog"]}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: My little ______ is five years old.", "a": "sister", "hint": "It starts with \u201cs\u201d and has 6 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Fish live in the ______.", "a": "water", "hint": "It starts with \u201cw\u201d and has 5 letters."}], [{"skill": "Spelling", "type": "spell", "q": "Type the missing word: Sleep is ______ for your health.", "a": "important", "hint": "It starts with \u201ci\u201d and has 9 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: I ______ about the puzzle all day.", "a": "thought", "hint": "It starts with \u201ct\u201d and has 7 letters."}, {"skill": "Logic", "type": "mc", "q": "If you read 2 pages a day, how many in 3 days?", "a": "6", "opts": ["4", "5", "6", "8"]}, {"skill": "Reading", "type": "mc", "q": "This passage is mostly about\u2026", "a": "how ducks swim", "opts": ["where ducks sleep", "duck eggs", "how ducks swim", "what ducks eat"], "passage": "Ducks are good swimmers. Their feet are shaped like paddles, which help them push through the water. Their feathers keep them warm and dry."}, {"skill": "Reading", "type": "mc", "q": "What keeps ducks warm and dry?", "a": "their feathers", "opts": ["the sun", "the mud", "their feet", "their feathers"], "passage": "Ducks are good swimmers. Their feet are shaped like paddles, which help them push through the water. Their feathers keep them warm and dry."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: These two shoes look ______.", "a": "different", "hint": "It starts with \u201cd\u201d and has 9 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Raise your hand to ask a ______.", "a": "question", "hint": "It starts with \u201cq\u201d and has 8 letters."}], [{"skill": "Spelling", "type": "spell", "q": "Type the missing word: Look up the word in a ______.", "a": "dictionary", "hint": "It starts with \u201cd\u201d and has 10 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Keep the colours ______ from the whites.", "a": "separate", "hint": "It starts with \u201cs\u201d and has 8 letters."}, {"skill": "Logic", "type": "mc", "q": "If all roses are flowers, and this is a rose, then it is a\u2026", "a": "flower", "opts": ["weed", "tree", "flower", "fruit"]}, {"skill": "Reading", "type": "mc", "q": "What do bees carry between flowers?", "a": "pollen", "opts": ["petals", "pollen", "honey", "sand"], "passage": "Bees are tiny but very important. As they fly from flower to flower to collect nectar, they carry pollen with them. This pollen helps plants make seeds and grow new fruit."}, {"skill": "Reading", "type": "mc", "q": "Why are bees important?", "a": "they help plants make fruit", "opts": ["they sleep a lot", "they help plants make fruit", "they make noise", "they are colourful"], "passage": "Bees are tiny but very important. As they fly from flower to flower to collect nectar, they carry pollen with them. This pollen helps plants make seeds and grow new fruit."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Magicians make things ______.", "a": "disappear", "hint": "It starts with \u201cd\u201d and has 9 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: She has lots of ______ in cooking.", "a": "experience", "hint": "It starts with \u201ce\u201d and has 10 letters."}]]}, {"name": "The Final Chapter", "blurb": "The hardest word case of them all!", "floors": [[{"skill": "Spelling", "type": "spell", "q": "Type the missing word: Let's play that game ______.", "a": "again", "hint": "It starts with \u201ca\u201d and has 5 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: The good news made me ______.", "a": "happy", "hint": "It starts with \u201ch\u201d and has 5 letters."}, {"skill": "Reading", "type": "mc", "q": "What is the dog's name?", "a": "Rex", "opts": ["Max", "Rex", "Ben", "Tom"], "passage": "Tom has a pet dog named Rex. Rex is brown and loves to run in the park. Every evening, Tom throws a ball and Rex brings it back."}, {"skill": "Logic", "type": "mc", "q": "Cat, dog, fish, chair \u2014 which does NOT belong?", "a": "chair", "opts": ["fish", "chair", "cat", "dog"]}, {"skill": "Reading", "type": "mc", "q": "What colour is Rex?", "a": "brown", "opts": ["brown", "white", "grey", "black"], "passage": "Tom has a pet dog named Rex. Rex is brown and loves to run in the park. Every evening, Tom throws a ball and Rex brings it back."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: I ______ love some ice cream.", "a": "would", "hint": "It starts with \u201cw\u201d and has 5 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: The white ______ hopped away.", "a": "rabbit", "hint": "It starts with \u201cr\u201d and has 6 letters."}], [{"skill": "Spelling", "type": "spell", "q": "Type the missing word: I ______ about the puzzle all day.", "a": "thought", "hint": "It starts with \u201ct\u201d and has 7 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: These two shoes look ______.", "a": "different", "hint": "It starts with \u201cd\u201d and has 9 letters."}, {"skill": "Logic", "type": "mc", "q": "All cats have whiskers. Tom is a cat. So Tom has\u2026", "a": "whiskers", "opts": ["fins", "whiskers", "feathers", "scales"]}, {"skill": "Reading", "type": "mc", "q": "Where did Maya find the key?", "a": "inside an old book", "opts": ["in her bag", "inside an old book", "under her bed", "in the garden"], "passage": "Maya found a small key inside an old book. The key opened a wooden box. Inside the box was a letter from her grandmother, written many years ago."}, {"skill": "Reading", "type": "mc", "q": "What did the key open?", "a": "a wooden box", "opts": ["a wooden box", "a gate", "a door", "a car"], "passage": "Maya found a small key inside an old book. The key opened a wooden box. Inside the box was a letter from her grandmother, written many years ago."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: We baked a cake for her ______.", "a": "birthday", "hint": "It starts with \u201cb\u201d and has 8 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Pizza is my ______ food.", "a": "favourite", "hint": "It starts with \u201cf\u201d and has 9 letters."}], [{"skill": "Spelling", "type": "spell", "q": "Type the missing word: Reading gives you ______.", "a": "knowledge", "hint": "It starts with \u201ck\u201d and has 9 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: The hike was a great ______.", "a": "adventure", "hint": "It starts with \u201ca\u201d and has 9 letters."}, {"skill": "Logic", "type": "mc", "q": "Which MUST be true? 'Every bird in the cage is yellow.'", "a": "A bird in the cage is yellow", "opts": ["A bird in the cage is yellow", "All birds are yellow", "The cage is yellow", "Yellow things are birds"]}, {"skill": "Reading", "type": "mc", "q": "What is the main idea?", "a": "The desert is full of life", "opts": ["Deserts are empty", "The desert is full of life", "Foxes are scary", "Cacti are tall"], "passage": "The desert may look empty, but it is full of life. Animals like the fennec fox sleep during the hot day and hunt at night when it is cooler. Plants such as the cactus store water in their thick stems to survive long months without rain."}, {"skill": "Reading", "type": "mc", "q": "When does the fennec fox hunt?", "a": "at night", "opts": ["in the morning", "at noon", "at sunrise", "at night"], "passage": "The desert may look empty, but it is full of life. Animals like the fennec fox sleep during the hot day and hunt at night when it is cooler. Plants such as the cactus store water in their thick stems to survive long months without rain."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: Water is ______ for life.", "a": "necessary", "hint": "It starts with \u201cn\u201d and has 9 letters."}, {"skill": "Spelling", "type": "spell", "q": "Type the missing word: The ______ built a new road.", "a": "government", "hint": "It starts with \u201cg\u201d and has 10 letters."}]]}];
+
+
+/* ===== SETTINGS (Papa can edit) ===== */
+const PARENT_PIN = "1234";        // change this to set a new Papa PIN
+const DAILY_LIMIT = 2;            // mansions per day (across both subjects)
+const FLOOR_POINTS = [10,15,20];  // Easy, Medium, Hard
+const QPF = 7;                    // questions per floor
+
+/* ===== STORAGE ===== */
+const KEY="maplewood_detective_v2";
+const DEFAULT={ points:0, gamesSolved:0, spent:0, gifts:[],
+  cleared:{math:[],eng:[]},  stars:{math:[],eng:[]},
+  day:"", dayCount:0, log:[] };
+function blankProg(){ return Array.from({length:7},()=>[false,false,false]); }
+function blankStars(){ return Array.from({length:7},()=>[0,0,0]); }
+let DB=load();
+function load(){
+  let d=JSON.parse(JSON.stringify(DEFAULT));
+  try{ const r=localStorage.getItem(KEY); if(r) d=Object.assign(d, JSON.parse(r)); }catch(e){}
+  if(!d.cleared.math||!d.cleared.math.length) d.cleared.math=blankProg();
+  if(!d.cleared.eng||!d.cleared.eng.length) d.cleared.eng=blankProg();
+  if(!d.stars.math||!d.stars.math.length) d.stars.math=blankStars();
+  if(!d.stars.eng||!d.stars.eng.length) d.stars.eng=blankStars();
+  return d;
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){} }
+function today(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+function rolloverDay(){ if(DB.day!==today()){ DB.day=today(); DB.dayCount=0; save(); } }
+function mansionsLeft(){ rolloverDay(); return Math.max(0, DAILY_LIMIT-DB.dayCount); }
+
+/* ===== CONFIG ===== */
+const SUBJECTS={
+  math:{ title:"🔢 Number Detective", tests:MATH_TESTS, color:["--math","--math2","--math-deep"], caseTag:"M" },
+  eng:{ title:"🔤 Word Detective", tests:ENG_TESTS, color:["--eng","--eng2","--eng-deep"], caseTag:"W" },
+};
+const FLOOR_NAMES=["Ground Floor","Upstairs","The Attic"];
+const FLOOR_DIFF=["Easy","Medium","Hard"];
+const FLOOR_ICONS=["🚪","🪜","🕯️"];
+const GIFTS=[
+  {e:"✨",n:"Sticker Pack",c:40},{e:"💅",n:"Glitter Tattoos",c:45},{e:"🖊️",n:"Gel Pen Set",c:50},
+  {e:"🎀",n:"Scrunchie Set",c:55},{e:"🧸",n:"Squishy Toy",c:60},{e:"🟢",n:"Slime Kit",c:75},
+  {e:"💎",n:"Bracelet Kit",c:80},{e:"📒",n:"Secret Diary",c:90},{e:"🎁",n:"Mystery Box",c:120},
+  {e:"🍦",n:"Ice-cream Outing",c:130},{e:"🧱",n:"Mini LEGO Set",c:150},{e:"🎬",n:"Movie Night",c:200},
+];
+
+/* ===== APP ===== */
+const App={
+  subject:null, testIdx:0, floor:0,
+  qi:0, score:0, streak:0, best:0, hearts:3, firstTry:0, qlist:[], locked:false, attempt:0,
+
+  init(){ rolloverDay(); this.refreshMenu(); },
+  go(id){ document.querySelectorAll('.view').forEach(v=>v.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); },
+  setTheme(key){ const c=SUBJECTS[key].color, r=document.documentElement.style; r.setProperty('--accent',`var(${c[0]})`); r.setProperty('--accent2',`var(${c[1]})`); r.setProperty('--accent-deep',`var(${c[2]})`); },
+
+  refreshMenu(){
+    rolloverDay();
+    document.getElementById('coinTop').textContent=DB.points;
+    document.getElementById('coinTop2').textContent=DB.points;
+    document.getElementById('coinTop3').textContent=DB.points;
+    document.getElementById('rewProg').textContent=DB.points+' pts';
+    const solved=(k)=>DB.cleared[k].filter(t=>t.every(Boolean)).length;
+    document.getElementById('mathProg').textContent=`${solved('math')}/7 solved`;
+    document.getElementById('engProg').textContent=`${solved('eng')}/7 solved`;
+    const left=mansionsLeft();
+    const chip=document.getElementById('dayChip');
+    chip.textContent = left>0 ? `🗓️ ${left} mansion${left===1?'':'s'} left today` : `🌙 Daily limit reached — come back tomorrow`;
+    chip.classList.toggle('full', left===0);
+  },
+
+  openSubject(key){
+    this.subject=key; this.setTheme(key);
+    document.getElementById('testsTitle').textContent=SUBJECTS[key].title;
+    document.getElementById('testsHead').textContent='7 Mystery Mansions';
+    document.getElementById('testsBlurb').textContent = key==='math'
+      ? 'Subtraction, division and fractions — type your answers! Each mansion gets tougher.'
+      : 'Type the spelling words, then reading and reasoning clues. Each mansion gets tougher.';
+    const left=mansionsLeft();
+    document.getElementById('testsNote').textContent = left>0
+      ? `You can finish ${left} more mansion${left===1?'':'s'} today.`
+      : `Daily limit reached — the gift shop is still open! 🎁`;
+    this.renderTests(); this.go('v-tests');
+  },
+
+  renderTests(){
+    const key=this.subject, list=document.getElementById('testList'); list.innerHTML='';
+    SUBJECTS[key].tests.forEach((t,i)=>{
+      const cl=DB.cleared[key][i]; const done=cl.every(Boolean); const floorsDone=cl.filter(Boolean).length;
+      const totstars=DB.stars[key][i].reduce((a,b)=>a+b,0);
+      const el=document.createElement('div'); el.className='tcard'+(done?' done':'');
+      el.innerHTML=`<div class="num">${i+1}</div>
+        <div><h3>${t.name}</h3><p>${done?'✓ Case solved':floorsDone>0?`Floor ${floorsDone}/3 cleared`:'3 floors · 21 questions'}</p></div>
+        <div class="st">${done?`<div class="stars">${'★'.repeat(Math.round(totstars/3))||'★'}</div>Solved`:'<span style="color:var(--accent-deep)">Open ▶</span>'}</div>`;
+      el.onclick=()=>this.openTest(i);
+      list.appendChild(el);
+    });
+  },
+
+  openTest(i){
+    this.testIdx=i; const key=this.subject; const t=SUBJECTS[key].tests[i];
+    document.getElementById('floorsTitle').textContent=SUBJECTS[key].title;
+    document.getElementById('floorsCase').textContent=`Case #${SUBJECTS[key].caseTag}-${String(i+1).padStart(2,'0')} · ${t.name}`;
+    document.getElementById('floorsHead').textContent=t.name;
+    document.getElementById('floorsBlurb').textContent=t.blurb;
+    this.renderFloors(); this.go('v-floors');
+  },
+
+  renderFloors(){
+    const key=this.subject, i=this.testIdx, cl=DB.cleared[key][i], st=DB.stars[key][i];
+    const list=document.getElementById('floorList'); list.innerHTML='';
+    for(let f=0;f<3;f++){
+      const cleared=cl[f]; const unlocked = f===0 || cl[f-1];
+      const el=document.createElement('div'); el.className='floor'+(unlocked?'':' locked');
+      const right = !unlocked ? `<span class="lockmsg">🔒 Locked</span>`
+        : cleared ? `<div class="starline">${'★'.repeat(st[f])}${'☆'.repeat(3-st[f])}</div><span class="cleartick">✓ Cleared</span>`
+        : `<div class="ptsbadge">+${FLOOR_POINTS[f]} pts</div><span class="btn" style="display:inline-block; width:auto; padding:8px 14px; font-size:1rem;">${f===0?'Start':'Enter'} ▶</span>`;
+      el.innerHTML=`<div class="badge">${FLOOR_ICONS[f]}</div>
+        <div><h3>${FLOOR_NAMES[f]}</h3><p class="meta">${FLOOR_DIFF[f]} · ${QPF} questions · +${FLOOR_POINTS[f]} pts</p></div>
+        <div class="right">${right}</div>`;
+      if(unlocked && !cleared) el.onclick=()=>this.tryStartFloor(f);
+      else if(unlocked && cleared) el.onclick=()=>this.tryStartFloor(f); // replay allowed (no new points)
+      list.appendChild(el);
+    }
+  },
+
+  tryStartFloor(f){
+    // daily limit only blocks STARTING a brand-new mansion (no floors cleared yet) when out of allowance
+    const cl=DB.cleared[this.subject][this.testIdx];
+    const mansionUntouched = cl.every(v=>!v);
+    if(f===0 && mansionUntouched && mansionsLeft()<=0){ this.go('v-limit'); return; }
+    this.startFloor(f);
+  },
+
+  startFloor(f){
+    // show pencil & paper reminder first
+    this.floor=f;
+    document.getElementById('readyEye').textContent=`${FLOOR_NAMES[f]} · ${FLOOR_DIFF[f]}`;
+    document.getElementById('readyGo').onclick=()=>this.beginFloor(f);
+    this.go('v-ready');
+  },
+
+  beginFloor(f){
+    this.floor=f; this.qi=0; this.score=0; this.streak=0; this.best=0; this.hearts=3; this.firstTry=0; this.locked=false;
+    const raw=SUBJECTS[this.subject].tests[this.testIdx].floors[f];
+    this.qlist=raw.map(q=>({...q, opts:q.opts?shuffle([...q.opts]):null}));
+    this.go('v-play'); this.renderHUD(); this.loadQ();
+  },
+
+  loadQ(){
+    this.locked=false; this.attempt=0;
+    const q=this.qlist[this.qi];
+    document.getElementById('qTag').textContent=`${FLOOR_NAMES[this.floor]} · ${q.skill} · Q${this.qi+1}`;
+    document.getElementById('qText').textContent=q.q;
+    document.getElementById('passageSlot').innerHTML = q.passage ? `<div class="passage">📖 ${q.passage}</div>` : '';
+    document.getElementById('qFb').className='feedback'; document.getElementById('qFb').innerHTML='&nbsp;';
+    document.getElementById('qHint').innerHTML='&nbsp;';
+    document.getElementById('pBar').style.width=`${(this.qi/QPF)*100}%`;
+    document.getElementById('pLab').textContent=`Q ${this.qi+1}/${QPF}`;
+    const area=document.getElementById('answerArea'); area.innerHTML='';
+    if(q.type==='mc'){
+      const wrap=document.createElement('div'); wrap.className='opts';
+      q.opts.forEach(o=>{ const b=document.createElement('button'); b.className='opt'; b.textContent=o; b.onclick=()=>this.answerMC(b,o,q); wrap.appendChild(b); });
+      area.appendChild(wrap);
+    }else{
+      const row=document.createElement('div'); row.className='typewrap';
+      const inp=document.createElement('input'); inp.className='typein'; inp.id='typeInput';
+      inp.autocomplete='off'; inp.autocapitalize='off'; inp.spellcheck=false;
+      if(q.skill==='Spelling'){ inp.placeholder='type the word'; inp.inputMode='text'; }
+      else { inp.placeholder='type the answer'; inp.inputMode='text'; }
+      inp.addEventListener('keydown',e=>{ if(e.key==='Enter') this.answerType(q); });
+      const go=document.createElement('button'); go.className='typego'; go.textContent='Check'; go.onclick=()=>this.answerType(q);
+      row.appendChild(inp); row.appendChild(go); area.appendChild(row);
+      const note=document.createElement('div'); note.className='spellnote';
+      note.textContent = q.skill==='Spelling' ? '✍️ Spell the whole word, then tap Check.' : '✍️ Type your answer (e.g. 3/4 for fractions), then Check.';
+      area.appendChild(note);
+      if(q.skill==='Spelling'){
+        const tools=document.createElement('div'); tools.className='spelltools';
+        const hear=document.createElement('button'); hear.type='button'; hear.className='spelltool';
+        hear.innerHTML='🔊 Hear the word'; hear.onclick=()=>this.sayWord(q.a);
+        tools.appendChild(hear); area.appendChild(tools);
+      }
+      setTimeout(()=>inp.focus(),150);
+    }
+  },
+
+  norm(s){ return String(s).trim().toLowerCase().replace(/\s+/g,'').replace(/[\u2019']/g,'').replace(/\.$/,''); },
+  // parse "a/b", "a", or decimal -> numeric value, or null
+  fracVal(s){
+    s=String(s).trim().replace(/\s+/g,'');
+    let m=s.match(/^(-?\d+)\/(\d+)$/);
+    if(m){ const d=+m[2]; if(d===0) return null; return (+m[1])/d; }
+    if(/^-?\d+(\.\d+)?$/.test(s)) return parseFloat(s);
+    return null;
+  },
+  isRight(q,val){
+    const v=this.norm(val); if(!v) return false;
+    if(this.norm(q.a)===v) return true;
+    if(q.alt && q.alt.some(a=>this.norm(a)===v)) return true;
+    // For fraction answers, accept any equivalent fraction OR decimal form.
+    if(q.skill==='Fractions' && /\//.test(q.a)){
+      const target=this.fracVal(q.a), got=this.fracVal(val);
+      if(target!==null && got!==null && Math.abs(target-got)<1e-9) return true;
+    }
+    return false;
+  },
+
+  sayWord(word){
+    try{
+      if(!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(word);
+      u.rate=0.78; u.pitch=1.05; u.lang='en-GB';
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  },
+
+  answerType(q){
+    if(this.locked) return;
+    const inp=document.getElementById('typeInput'); if(!inp) return;
+    if(this.isRight(q, inp.value)){ inp.classList.add('correct'); inp.disabled=true; this.onCorrect(()=>{ }, q, inp); }
+    else { this.onWrong(q, inp); inp.classList.add('wrong'); setTimeout(()=>inp.classList.remove('wrong'),450); inp.select&&inp.select(); }
+  },
+
+  answerMC(btn,val,q){
+    if(this.locked) return;
+    if(val===q.a){ btn.classList.add('correct'); document.querySelectorAll('.opt').forEach(o=>{o.classList.add('lock'); if(o!==btn)o.classList.add('fade');}); this.onCorrect(null,q,null,btn); }
+    else { btn.classList.add('wrong','lock'); this.onWrong(q,null); setTimeout(()=>btn.classList.remove('wrong'),500); }
+  },
+
+  onCorrect(_,q,inp,btn){
+    this.locked=true;
+    let gain; const fb=document.getElementById('qFb');
+    if(this.attempt===0){ this.firstTry++; this.streak++; this.best=Math.max(this.best,this.streak);
+      gain=100+(this.streak-1)*20+this.floor*20;
+      fb.className='feedback good'; fb.textContent=this.streak>=2?`Correct! 🔥 ${this.streak} streak  +${gain}`:`Correct!  +${gain}`;
+    }else{ gain=20; fb.className='feedback good'; fb.textContent=`Got it!  +${gain}`; }
+    this.score+=gain; this.renderHUD();
+    setTimeout(()=>{ this.qi++; if(this.qi>=QPF) this.floorCleared(); else this.loadQ(); }, 850);
+  },
+
+  onWrong(q,inp){
+    this.attempt++; this.streak=0; this.hearts--;
+    this.renderHUD();
+    const fb=document.getElementById('qFb'); fb.className='feedback bad';
+    if(this.hearts<=0){
+      fb.textContent = q.type==='spell'||q.type==='type' ? `Out of lives! The answer was “${q.a}”. Floor will restart.` : 'Out of lives! This floor will restart.';
+      this.locked=true; document.querySelectorAll('.opt').forEach(o=>o.classList.add('lock'));
+      const ti=document.getElementById('typeInput'); if(ti) ti.disabled=true;
+      setTimeout(()=>this.floorFailed(),1300);
+    }else{
+      fb.textContent=`Oops! ${this.hearts} ${this.hearts===1?'life':'lives'} left — try again.`;
+      document.getElementById('qHint').textContent = q.hint ? '💡 '+q.hint : '';
+    }
+  },
+
+  renderHUD(){
+    document.getElementById('hScore').textContent=this.score;
+    document.getElementById('hHearts').textContent='❤️'.repeat(Math.max(0,this.hearts))+'🤍'.repeat(3-Math.max(0,this.hearts));
+    document.getElementById('hStreak').textContent=this.streak;
+    document.getElementById('hFlame').classList.toggle('lit', this.streak>=2);
+  },
+
+  floorCleared(){
+    document.getElementById('pBar').style.width='100%';
+    const key=this.subject, i=this.testIdx, f=this.floor;
+    let stars=this.firstTry>=QPF?3:this.firstTry>=Math.ceil(QPF*0.7)?2:1;
+    const wasCleared=DB.cleared[key][i][f];
+    DB.cleared[key][i][f]=true;
+    DB.stars[key][i][f]=Math.max(DB.stars[key][i][f]||0, stars);
+    // award floor points only first time
+    let earned=0;
+    if(!wasCleared){ earned=FLOOR_POINTS[f]; DB.points+=earned; }
+    const allDone=DB.cleared[key][i].every(Boolean);
+    const firstFullSolve = allDone && !this._countedThisTest && !this._mansionWasSolvedBefore(key,i);
+    save();
+
+    document.getElementById('feSeal').textContent=stars===3?'🌟':stars===2?'🎉':'👍';
+    document.getElementById('feHead').textContent=FLOOR_NAMES[f]+' cleared!';
+    document.getElementById('feRank').textContent=FLOOR_DIFF[f]+' floor done';
+    document.getElementById('feStars').textContent='★'.repeat(stars)+'☆'.repeat(3-stars);
+    document.getElementById('fePts').textContent = earned>0?`⭐ +${earned} points!`:`Replay — points already earned`;
+    document.getElementById('feScore').textContent=this.score;
+    document.getElementById('feBest').textContent=this.best;
+    document.getElementById('feAcc').textContent=this.firstTry+'/'+QPF;
+    const btns=document.getElementById('feBtns'); btns.innerHTML='';
+    if(f===2 && allDone){
+      const b=document.createElement('button'); b.className='btn'; b.textContent='Solve the Case! 🏅';
+      b.onclick=()=>this.showCaseWin(); btns.appendChild(b);
+    }else{
+      const b=document.createElement('button'); b.className='btn'; b.textContent='Next Floor ▶';
+      b.onclick=()=>{ this.floor++; this.startFloor(this.floor); }; btns.appendChild(b);
+      const g=document.createElement('div'); g.style.height='10px'; btns.appendChild(g);
+      const b2=document.createElement('button'); b2.className='btn ghost'; b2.textContent='Floor map';
+      b2.onclick=()=>{ this.renderFloors(); this.go('v-floors'); }; btns.appendChild(b2);
+    }
+    this.refreshMenu();
+    this.go('v-floorend'); confetti(stars>=3?32:18);
+  },
+
+  _mansionWasSolvedBefore(key,i){ return this._solvedFlag && this._solvedFlag[key+i]; },
+
+  floorFailed(){
+    document.getElementById('feSeal').textContent='💔';
+    document.getElementById('feHead').textContent='So close, Koel!';
+    document.getElementById('feRank').textContent='Floor not cleared';
+    document.getElementById('feStars').textContent='☆☆☆';
+    document.getElementById('fePts').textContent='No points lost — try again!';
+    document.getElementById('feScore').textContent=this.score;
+    document.getElementById('feBest').textContent=this.best;
+    document.getElementById('feAcc').textContent=this.firstTry+'/'+QPF;
+    const btns=document.getElementById('feBtns'); btns.innerHTML='';
+    const b=document.createElement('button'); b.className='btn'; b.textContent='Try this floor again ↻';
+    b.onclick=()=>this.startFloor(this.floor); btns.appendChild(b);
+    const g=document.createElement('div'); g.style.height='10px'; btns.appendChild(g);
+    const b2=document.createElement('button'); b2.className='btn ghost'; b2.textContent='Floor map';
+    b2.onclick=()=>{ this.renderFloors(); this.go('v-floors'); }; btns.appendChild(b2);
+    this.go('v-floorend');
+  },
+
+  showCaseWin(){
+    const key=this.subject, i=this.testIdx;
+    // count toward daily + total games, only once per mansion ever
+    this._solvedFlag=this._solvedFlag||{};
+    if(!DB._everSolved) DB._everSolved={};
+    const tagKey=key+i;
+    if(!DB._everSolved[tagKey]){
+      DB._everSolved[tagKey]=true; DB.gamesSolved=(DB.gamesSolved||0)+1;
+    }
+    // daily count: every completed mansion run counts (even replays) — limits sittings
+    rolloverDay(); DB.dayCount=(DB.dayCount||0)+1;
+    // log it for Papa
+    if(!DB.log) DB.log=[];
+    DB.log.unshift({
+      d:new Date().toISOString(),
+      subj:key==='math'?'Math':'English',
+      name:SUBJECTS[key].tests[i].name,
+      score:this.score,
+      stars:DB.stars[key][i].reduce((a,b)=>a+b,0)
+    });
+    if(DB.log.length>200) DB.log.length=200;
+    save();
+    const totalPts=FLOOR_POINTS.reduce((a,b)=>a+b,0);
+    document.getElementById('cwHead').textContent=SUBJECTS[key].tests[i].name+' — solved!';
+    document.getElementById('cwLine').textContent='You cleared all three floors of the mansion!';
+    document.getElementById('cwReward').textContent=`⭐ Mansion complete! You've banked up to ${totalPts} points from this case.`;
+    document.getElementById('cwScore').textContent=this.score;
+    document.getElementById('cwGames').textContent=DB.gamesSolved;
+    document.getElementById('cwBank').textContent=DB.points;
+    const left=mansionsLeft();
+    const cd=document.getElementById('cwDay');
+    cd.textContent = left>0?`🗓️ ${left} mansion${left===1?'':'s'} left today`:`🌙 That's 2 today — see you tomorrow!`;
+    cd.classList.toggle('full', left===0);
+    this.refreshMenu(); this.go('v-casewin'); confetti(40);
+  },
+
+  backToTests(){ this.renderTests(); this.go('v-tests'); },
+  quitToFloors(){ this.renderFloors(); this.go('v-floors'); },
+
+  tryPin(){
+    const v=document.getElementById('pinInput').value.trim();
+    if(v===PARENT_PIN){ DB.dayCount=Math.max(0,DB.dayCount-1); save(); this.refreshMenu(); toast('Unlocked! One more mansion 🔓'); this.openSubject(this.subject||'math'); }
+    else { toast('Wrong PIN'); }
+  },
+
+  /* rewards */
+  openRewards(){
+    this.setTheme('math');
+    document.getElementById('pbAmt').textContent=DB.points;
+    document.getElementById('rGames').textContent=DB.gamesSolved||0;
+    document.getElementById('rSpend').textContent=DB.spent||0;
+    this.renderShop(); this.renderBasket(); this.go('v-rewards');
+  },
+  renderShop(){
+    const shop=document.getElementById('shop'); shop.innerHTML='';
+    GIFTS.forEach(g=>{
+      const owned=(DB.gifts||[]).filter(x=>x===g.n).length; const afford=DB.points>=g.c;
+      const el=document.createElement('div'); el.className='gift';
+      el.innerHTML=`${owned>0?`<span class="owned">x${owned}</span>`:''}<div class="emoji">${g.e}</div>
+        <div class="nm">${g.n}</div><div class="cost">${g.c} pts</div>
+        <button class="redeem" ${afford?'':'disabled'}>${afford?'Get it 🎁':'Need '+(g.c-DB.points)}</button>`;
+      el.querySelector('.redeem').onclick=()=>this.redeem(g); shop.appendChild(el);
+    });
+  },
+  renderBasket(){
+    const list=document.getElementById('basketList');
+    if(!DB.gifts||!DB.gifts.length){ list.innerHTML='<p class="empty">No gifts yet — solve cases to earn points, then treat yourself!</p>'; return; }
+    const c={}; DB.gifts.forEach(n=>c[n]=(c[n]||0)+1);
+    const ul=document.createElement('ul');
+    Object.entries(c).forEach(([n,k])=>{ const g=GIFTS.find(x=>x.n===n); const li=document.createElement('li'); li.textContent=`${g?g.e:'🎁'} ${n}${k>1?' × '+k:''}`; ul.appendChild(li); });
+    list.innerHTML=''; list.appendChild(ul);
+  },
+  redeem(g){
+    if(DB.points<g.c){ toast('Not enough points yet!'); return; }
+    DB.points-=g.c; DB.spent=(DB.spent||0)+g.c; (DB.gifts=DB.gifts||[]).push(g.n);
+    save(); this.refreshMenu(); this.openRewards(); toast(`${g.e} ${g.n} unlocked! Ask Papa 🎉`); confetti(22);
+  },
+  resetAll(){ if(confirm('Reset ALL progress, points and gifts? This cannot be undone.')){ DB=JSON.parse(JSON.stringify(DEFAULT)); DB.cleared.math=blankProg(); DB.cleared.eng=blankProg(); DB.stars.math=blankStars(); DB.stars.eng=blankStars(); save(); this.refreshMenu(); this.openRewards(); toast('Everything reset.'); } },
+
+  /* ---- Papa panel ---- */
+  openPapa(){ this.setTheme('math'); document.getElementById('papaLock').style.display='block'; document.getElementById('papaContent').style.display='none'; document.getElementById('papaPin').value=''; this.go('v-papa'); },
+  unlockPapa(){
+    const v=document.getElementById('papaPin').value.trim();
+    if(v!==PARENT_PIN){ toast('Wrong PIN'); return; }
+    document.getElementById('papaLock').style.display='none';
+    document.getElementById('papaContent').style.display='block';
+    rolloverDay();
+    document.getElementById('ppPoints').textContent=DB.points;
+    document.getElementById('ppGames').textContent=DB.gamesSolved||0;
+    document.getElementById('ppToday').textContent=DB.dayCount||0;
+    this.renderLog();
+  },
+  renderLog(){
+    const el=document.getElementById('papaLog'); const log=DB.log||[];
+    if(!log.length){ el.innerHTML='<p class="empty">No mansions solved yet.</p>'; return; }
+    const fmt=(iso)=>{ const d=new Date(iso); return d.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' · '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); };
+    const rows=log.slice(0,60).map(e=>`<div class="logrow"><span class="lt">${e.subj==='Math'?'🔢':'🔤'} ${e.name}</span><span class="lr">${'★'.repeat(Math.round((e.stars||0)/3))||'★'} · ${e.score} pts<br><span class="ld">${fmt(e.d)}</span></span></div>`).join('');
+    el.innerHTML=rows;
+  },
+  exportData(){
+    try{
+      const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob); const a=document.createElement('a');
+      const d=new Date(); const stamp=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      a.href=url; a.download='koel-detective-backup-'+stamp+'.json'; document.body.appendChild(a); a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },100);
+      toast('Backup saved 💾');
+    }catch(e){ toast('Could not save backup'); }
+  },
+  importData(ev){
+    const f=ev.target.files&&ev.target.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=()=>{
+      try{
+        const data=JSON.parse(r.result);
+        if(typeof data.points!=='number' || !data.cleared) throw new Error('bad file');
+        if(!confirm('Restore this backup? It will replace the current progress on this device.')) return;
+        DB=Object.assign(JSON.parse(JSON.stringify(DEFAULT)), data);
+        if(!DB.cleared.math||!DB.cleared.math.length) DB.cleared.math=blankProg();
+        if(!DB.cleared.eng||!DB.cleared.eng.length) DB.cleared.eng=blankProg();
+        if(!DB.stars.math||!DB.stars.math.length) DB.stars.math=blankStars();
+        if(!DB.stars.eng||!DB.stars.eng.length) DB.stars.eng=blankStars();
+        save(); this.refreshMenu(); this.unlockPapa(); toast('Backup restored ✅');
+      }catch(e){ toast('That file could not be read'); }
+      ev.target.value='';
+    };
+    r.readAsText(f);
+  },
+};
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+let toastT; function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+function confetti(n){ const e=['⭐','🎉','🔍','🏅','✨','🎁']; for(let i=0;i<n;i++){ const c=document.createElement('div'); c.className='confetti'; c.textContent=e[i%e.length]; c.style.left=Math.random()*100+'vw'; c.style.animationDuration=(2+Math.random()*2)+'s'; c.style.animationDelay=(Math.random()*.5)+'s'; document.body.appendChild(c); setTimeout(()=>c.remove(),4500);} }
+
+App.init();
+</script>
+</body>
+</html>
